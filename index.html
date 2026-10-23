@@ -1115,7 +1115,8 @@ function render(force){
   const sx=window.scrollX,sy=window.scrollY;
   const pb=$(".planbox");const pbx=pb?pb.scrollLeft:0;
   const html=(ME.mode==="demo"?`<div class="banner"><div><b>Modalità demo.</b> Il collegamento ai dati condivisi non è disponibile qui: le modifiche restano solo su questo dispositivo e non sono visibili agli altri volontari.</div></div>`:"")+fn();
-  const oldHero=!force&&R.page==="home"&&$(".hero.photo",v);
+  const navKey=R.page+"|"+(R.id||"")+"|"+(R.tab||"");const navChanged=render._nav!==navKey;render._nav=navKey;
+  const oldHero=(!force||!navChanged)&&R.page==="home"&&$(".hero.photo",v);
   if(oldHero){
     // aggiorna la home senza toccare le foto, così non ripartono
     const tmp=document.createElement("div");tmp.innerHTML=html;const nh=$(".hero.photo",tmp);
@@ -1125,9 +1126,9 @@ function render(force){
       kids.slice(0,i).forEach(n=>v.insertBefore(n,oldHero));kids.slice(i+1).forEach(n=>v.appendChild(n));
     }else v.innerHTML=html;
   }else v.innerHTML=html;
-  if(force&&!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)){const cls=ANIM==="tab"?"swap-tab":"swap-page";v.classList.remove("swap-tab","swap-page");void v.offsetWidth;v.classList.add(cls);clearTimeout(window._swT);window._swT=setTimeout(()=>v.classList.remove(cls),400);ANIM="page"}
+  if(force&&navChanged&&!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)){const cls=ANIM==="tab"?"swap-tab":"swap-page";v.classList.remove("swap-tab","swap-page");void v.offsetWidth;v.classList.add(cls);clearTimeout(window._swT);window._swT=setTimeout(()=>v.classList.remove(cls),400);ANIM="page"}
   else window.scrollTo(sx,sy);
-  const pb2=$(".planbox");if(pb2&&!force)pb2.scrollLeft=pbx;
+  const pb2=$(".planbox");if(pb2&&!(force&&navChanged))pb2.scrollLeft=pbx;
   (AFTER[R.page]||(()=>{}))();
 }
 
@@ -2643,7 +2644,7 @@ function sbAccessPage(){
   const pend=all.filter(m=>m.role==="pending"),act=all.filter(m=>m.role==="org"||m.role==="vol"),off=all.filter(m=>m.role==="blocked");
   const pill2=r=>`<span class="pill ${r==="org"?"s-conf":r==="vol"?"s-idea":r==="blocked"?"s-bad":"s-prep"}">${ROLE_L[r]||r}</span>`;
   const row=m=>`<div class="li"><div class="grow"><div class="t">${h(m.name||"Senza nome")}${m.id===ME.id?' <span class="small muted">(tu)</span>':""}</div><div class="small muted">${[em(m.id),m.seen?"ultimo accesso "+fStamp(m.seen):"registrato "+fStamp(m.at)].filter(Boolean).join(" · ")}</div></div>
-    ${org&&m.id!==ME.id?`<select class="inl" data-setrole="${h(m.id)}" aria-label="Ruolo di ${h(m.name)}">${["vol","org","blocked"].map(r=>`<option value="${r}" ${m.role===r?"selected":""}>${ROLE_L[r]}</option>`).join("")}</select>`:pill2(m.role)}</div>`;
+    ${org&&m.id!==ME.id?`<select class="inl" data-setrole="${h(m.id)}" aria-label="Ruolo di ${h(m.name)}">${["vol","org","blocked"].map(r=>`<option value="${r}" ${m.role===r?"selected":""}>${ROLE_L[r]}</option>`).join("")}<option value="delete">🗑 Elimina account…</option></select>`:pill2(m.role)}</div>`;
   const link=location.origin+location.pathname;
   return `<div class="head"><div><div class="eyebrow">Il tuo account</div><h1>Accesso</h1></div></div>
   <div class="card"><div class="ch"><div><h2>${h(me.name||"")}</h2><p class="small muted">${h(SB.user?SB.user.email:"")}</p></div>${pill2(me.role)}</div>
@@ -2661,10 +2662,16 @@ document.addEventListener("click",e=>{
 });
 async function sbDeleteAcct(id){
   const m=S.members.find(x=>x.id===id);
+  if(m&&m.role!=="blocked"){ /* prima si toglie l'accesso, poi si elimina */
+    const {data:u,error:ue}=await SB.client.from("profiles").update({role:"blocked"}).eq("id",id).select("id");
+    if(ue||!u||!u.length){toast(/almeno un moderatore/.test(ue&&ue.message||"")?"Deve restare almeno un moderatore.":"Non hai il permesso per eliminare questo account.",true);return}
+    m.role="blocked";m.editor=false}
   try{const {data,error}=await SB.client.functions.invoke("delete-member",{body:{id}});
-    if(error||!data||!data.ok)throw error||new Error("x");
+    if(error){let why="";try{why=(await error.context.json()).error}catch(_){}
+      throw new Error(why==="solo moderatori"?"Solo i moderatori possono eliminare account.":why==="self"?"Non puoi eliminare il tuo account.":"x")}
+    if(!data||!data.ok)throw new Error("x");
     S.members=S.members.filter(x=>x.id!==id);if(SB.emails)delete SB.emails[id];toast(`Account di ${m?m.name:"questa persona"} eliminato`);render(true)}
-  catch(e){console.error(e);toast("Eliminazione non riuscita: controlla la connessione e riprova.",true)}
+  catch(e){console.error(e);toast(e&&e.message&&e.message!=="x"?e.message:"Eliminazione non riuscita: controlla la connessione e riprova.",true);render(true)}
 }
 document.addEventListener("click",e=>{
   const d=e.target.closest("[data-delacct]");if(!d||ME.mode!=="supa")return;const m=S.members.find(x=>x.id===d.dataset.delacct);
@@ -2672,6 +2679,7 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("change",e=>{
   const s=e.target.closest("[data-setrole]");if(!s||ME.mode!=="supa")return;const m=S.members.find(x=>x.id===s.dataset.setrole);const r=s.value;
+  if(r==="delete"){confirmBox(`Eliminare per sempre l'account di ${m?m.name:"questa persona"}? Non potrà più entrare con questa email, a meno che non si registri di nuovo. Quello che ha scritto nell'app resta.`,"Elimina account",async()=>sbDeleteAcct(s.dataset.setrole));render(true);return}
   if(r==="blocked"){confirmBox(`Togliere l'accesso a ${m?m.name:"questa persona"}? Non potrà più entrare finché non lo riattivi.`,"Togli accesso",async()=>sbSetRole(s.dataset.setrole,r));render(true);return}
   sbSetRole(s.dataset.setrole,r);
 });
