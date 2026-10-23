@@ -314,6 +314,8 @@ select.inl{border:1px solid var(--line);border-radius:6px;background:var(--surfa
 .iphbig{display:block;width:100%;padding:0;border:0;background:var(--surface-2);border-radius:12px;overflow:hidden;position:relative;margin:4px 0 12px;cursor:zoom-in}
 .iphbig img{display:block;width:100%;max-height:260px;object-fit:cover}.iphbig span{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.6);color:#fff;font-size:.8em;padding:4px 8px;border-radius:6px}
 .bar.warn i{background:var(--bad)}
+.invcode{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;background:var(--gold-soft);color:var(--ink);padding:4px 8px;border-radius:6px;flex:none}
+.invbig{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:2rem;font-weight:700;letter-spacing:.14em;margin:6px 0 8px;color:var(--ink)}
 .spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--gold);animation:sp 0.8s linear infinite;display:inline-block}
 @keyframes sp{to{transform:rotate(360deg)}}
 .comments{display:flex;flex-direction:column;gap:8px}
@@ -2312,6 +2314,7 @@ document.addEventListener("click",async e=>{
     case "newMat":matForm({},d.ev);break;
     case "newItem":itemForm();break;
     case "scanMag":scanMag();break;
+    case "newInvite":if(ME.mode==="supa"&&isEditor())inviteForm();break;
     case "newEdition":confirmBox(`Preparare la ${castAuto().ed}ª Castagnata? La ${(+((S.settings.find(x=>x.id==="castagnata")||{}).edition)||CAST_BASE.ed)}ª va in Archivio con turni, attività completate, consegne e una copia della pianta. Stand, magazzino e foto restano.`,"Prepara la nuova edizione",async()=>{await act(()=>startNewEdition(),"Nuova edizione pronta");render(true)});break;
     case "standPhotos":{const ov=t.closest(".ov");if(ov)ov.remove();standPhotosModal(d.name,d.color,d.n);break}
     case "textSize":textSizeModal();break;
@@ -2444,7 +2447,7 @@ const SB_ASSETS={
   async delete(id){STG.at=0;await SB.client.storage.from("photos").remove([id+".jpg"])}
 };
 function sbErr(error){const c=error&&error.code;if(c==="42501"||c==="P0001"||/row-level security|permission/i.test(error&&error.message||""))return {code:"invalid_argument",message:error.message};return {code:"x",message:error&&error.message}}
-const toMember=p=>({id:p.id,name:p.name||"",role:p.role,editor:p.role==="org",seen:p.last_seen||null,at:p.created_at});
+const toMember=p=>({id:p.id,name:p.name||"",role:p.role,editor:p.role==="org",seen:p.last_seen||null,at:p.created_at,inv:p.invited_with||""});
 function makeSupa(sb){
   const data={};Object.keys(COLL).forEach(k=>{if(k!=="members")data[k]=new Map()});
   const emit=k=>{S[k]=[...data[k].values()];if(k==="events")S.events=applyAuto(S.events);if(k==="notices")watchNotices();schedule()};
@@ -2456,7 +2459,7 @@ function makeSupa(sb){
     await loadMembers();SB.lastLoad=Date.now();
     Object.keys(COLL).forEach(k=>loaded.add(k));markReady();
   }
-  async function loadMembers(){const {data:rows,error}=await sb.from("profiles").select("id,name,role,last_seen,created_at");if(error)throw error;S.members=rows.map(toMember);schedule()}
+  async function loadMembers(){const {data:rows,error}=await sb.from("profiles").select("id,name,role,last_seen,created_at,invited_with");if(error)throw error;S.members=rows.map(toMember);schedule()}
   return {sb,loadMembers,
     start(){
       if(SB.started)return SB.started;
@@ -2534,15 +2537,21 @@ function sbAuthScreen(){
   const errP=id=>`<p class="small" id="${id}" style="color:var(--bad)" role="alert" hidden></p>`;
   if(st==="loading")return `<p class="muted"><span class="spin"></span> Collegamento in corso…</p>`;
   if(st==="error")return `<h2>Qualcosa non ha funzionato</h2><p class="small">Non riesco a collegarmi. Controlla la connessione e riprova.</p><button class="btn pri big" type="button" data-sba="retry">Riprova</button>`;
-  if(st==="pending")return `<h2>Ciao${nm?" "+nm:""}!</h2><p>La tua registrazione è arrivata.</p><p class="small muted">Un moderatore della Pro Loco deve approvarti. Appena lo fa, l'app si apre da sola: puoi lasciare aperta questa pagina o tornare più tardi.</p><button class="btn ghost" type="button" data-sba="logout">Esci</button>`;
+  if(st==="pending")return `<h2>Ciao${nm?" "+nm:""}!</h2><p>La tua registrazione è arrivata.</p>
+    ${AUTH.badInvite?`<p class="small" style="color:var(--bad)">Il codice di invito che hai scritto non è valido o è scaduto.</p>`:""}
+    <p class="small muted">Un moderatore della Pro Loco deve approvarti. Appena lo fa, l'app si apre da sola: puoi lasciare aperta questa pagina o tornare più tardi.</p>
+    <form id="sbRedeem" class="gform" style="margin-top:14px"><label class="fld"><span>Hai un codice di invito?</span><input id="sv_c" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="Es. K7M2Q9XB" style="letter-spacing:.12em;text-transform:uppercase"></label>
+    ${errP("sv_x")}<button class="btn pri" type="submit">Entra con il codice</button></form>
+    <button class="btn ghost" type="button" data-sba="logout">Esci</button>`;
   if(st==="blocked")return `<h2>Accesso non attivo</h2><p class="small">Il tuo accesso all'app è stato tolto. Se pensi che sia un errore, parla con un organizzatore della Pro Loco.</p><button class="btn ghost" type="button" data-sba="logout">Esci</button>`;
   if(st==="checkmail")return `<h2>Controlla la tua email</h2><p class="small">Ti abbiamo mandato un messaggio${AUTH.mail?` a <b>${h(AUTH.mail)}</b>`:""}. Apri il link che c'è dentro e torni qui già dentro.</p><p class="small muted">Non lo trovi? Guarda anche nella cartella spam.</p><button class="btn ghost" type="button" data-sba="login">Torna al login</button>`;
   if(st==="sentreset")return `<h2>Email inviata</h2><p class="small">Se esiste un account con <b>${h(AUTH.mail||"")}</b>, ti arriva un messaggio con il link per scegliere una nuova password.</p><button class="btn ghost" type="button" data-sba="login">Torna al login</button>`;
-  if(st==="register")return `<form id="sbReg" class="gform"><h2>Registrati</h2><p class="small muted">Crea il tuo accesso. Dopo la registrazione un moderatore della Pro Loco ti approva.</p>
+  if(st==="register")return `<form id="sbReg" class="gform"><h2>Registrati</h2><p class="small muted">Crea il tuo accesso alla app della Pro Loco.</p>
     <label class="fld"><span>Nome e cognome</span><input id="sr_n" autocomplete="name" maxlength="80"></label>
     <label class="fld"><span>Email</span><input id="sr_e" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false"></label>
     ${pw("sr_p","Password (almeno 8 caratteri)","new-password")}
     <label class="fld"><span>Ripeti la password</span><input id="sr_p2" type="password" autocomplete="new-password"></label>
+    <label class="fld"><span>Codice di invito</span><input id="sr_c" value="${h(AUTH.invite||"")}" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="Se te l'hanno dato" style="letter-spacing:.12em;text-transform:uppercase"><span class="hint">${AUTH.invite?"Codice già inserito dal link: entri subito.":"Con un codice valido entri subito. Senza codice, un moderatore ti approva."}</span></label>
     ${errP("sr_x")}<button class="btn pri big" type="submit">Crea account</button><button class="btn ghost" type="button" data-sba="login">Ho già un account</button></form>`;
   if(st==="forgot")return `<form id="sbForgot" class="gform"><h2>Password dimenticata</h2><p class="small muted">Scrivi la tua email: ti mandiamo un link per sceglierne una nuova.</p>
     <label class="fld"><span>Email</span><input id="sf_e" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" value="${h(AUTH.mail||"")}"></label>
@@ -2565,7 +2574,7 @@ document.addEventListener("click",e=>{
   AUTH.state=k;render(true);setTimeout(()=>{const f=$(".gform input");if(f&&window.matchMedia("(min-width:861px)").matches)f.focus()},50);
 });
 document.addEventListener("submit",async e=>{
-  const f=e.target;if(!["sbLogin","sbReg","sbForgot","sbNew"].includes(f.id))return;e.preventDefault();
+  const f=e.target;if(!["sbLogin","sbReg","sbForgot","sbNew","sbRedeem"].includes(f.id))return;e.preventDefault();
   const b=f.querySelector("[type=submit]");if(b.disabled)return;const lbl=b.innerHTML;const err=f.querySelector("[role=alert]");
   b.disabled=true;b.innerHTML='<span class="spin"></span> Attendi';err.hidden=true;
   const fail=m=>{b.disabled=false;b.innerHTML=lbl;err.hidden=false;err.textContent=m};
@@ -2583,11 +2592,19 @@ document.addEventListener("submit",async e=>{
       if(!okEmail(email))return fail("Questa email non sembra corretta.");
       if(p1.length<8)return fail("La password deve avere almeno 8 caratteri.");
       if(p1!==p2)return fail("Le due password non coincidono.");
-      const {data,error}=await A.signUp({email,password:p1,options:{data:{name},emailRedirectTo:here}});
+      const invite=normCode($("#sr_c").value);AUTH.invite=invite;
+      const {data,error}=await A.signUp({email,password:p1,options:{data:invite?{name,invite}:{name},emailRedirectTo:here}});
       if(error)return fail(sbMsg(error));
       if(data.user&&Array.isArray(data.user.identities)&&!data.user.identities.length)return fail("Esiste già un account con questa email: accedi.");
       if(!data.session){AUTH.state="checkmail";render(true);return}
-      await sbAfterSignIn(data.user,"new");return}
+      try{sessionStorage.removeItem("pl-invite")}catch(_){}
+      AUTH.badInvite=!!invite;await sbAfterSignIn(data.user,"new");return}
+    if(f.id==="sbRedeem"){
+      const c=normCode($("#sv_c").value);if(c.length!==8)return fail("Il codice ha 8 caratteri: controllalo.");
+      const {data,error}=await SB.client.rpc("redeem_invite",{c});
+      if(error)return fail(/troppi/.test(error.message||"")?"Troppi tentativi: chiedi a un moderatore di approvarti.":"Non riesco a controllare il codice, riprova.");
+      if(!data)return fail("Codice non valido o scaduto.");
+      AUTH.badInvite=false;const p=await sbLoadProfile();sbApplyProfile(p,true);return}
     if(f.id==="sbForgot"){
       const email=$("#sf_e").value.trim().toLowerCase();AUTH.mail=email;
       if(!okEmail(email))return fail("Scrivi la tua email per intero.");
@@ -2610,9 +2627,11 @@ async function sbInit(){
     store=makeSupa(SB.client);
   }
   if(/type=recovery/.test(location.hash))SB.recovery=true;
+  {const m=location.hash.match(/invito=([A-Za-z0-9-]{6,14})/);if(m){AUTH.invite=normCode(m[1]);try{sessionStorage.setItem("pl-invite",AUTH.invite)}catch(_){}try{history.replaceState(null,"",location.pathname)}catch(_){}}
+   else{try{AUTH.invite=sessionStorage.getItem("pl-invite")||""}catch(_){}}}
   let session=null;try{({data:{session}}=await SB.client.auth.getSession())}catch(e){AUTH.state="error";render(true);return}
   if(SB.recovery&&session){AUTH.state="newpw";render(true);return}
-  if(!session){AUTH.state="login";render(true);return}
+  if(!session){AUTH.state=AUTH.invite?"register":"login";render(true);return}
   if(/access_token|type=signup/.test(location.hash)){try{history.replaceState(null,"",location.pathname)}catch(_){}}
   await sbAfterSignIn(session.user,/type=signup/.test(location.hash)?"new":false);
 }
@@ -2637,25 +2656,66 @@ async function sbSetRole(id,role){
   toast(role==="org"?"Ora è moderatore":role==="vol"?"Ora è volontario":role==="blocked"?"Accesso tolto":"Fatto");render(true);
 }
 async function sbLoadEmails(){if(SB.emails||!isEditor())return;SB.emails={};try{const {data}=await SB.client.rpc("member_emails");(data||[]).forEach(r=>SB.emails[r.id]=r.email);schedule()}catch(_){SB.emails=null}}
+const normCode=v=>String(v||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8);
+const INV={list:null,at:0,busy:false};
+const inviteLink=c=>location.origin+location.pathname+"#invito="+c;
+const invText=i=>`Ciao! Questa è l'app della Pro Loco Smerillo per volontari, magazzino e feste. Registrati da questo link ed entri subito: ${inviteLink(i.code)}\n(Codice: ${i.code}, valido fino al ${fDateTime(i.expires_at)})`;
+function fDateTime(iso){try{return new Date(iso).toLocaleString("it-IT",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})}catch(_){return iso}}
+function invState(i){if(i.revoked)return "off";if(new Date(i.expires_at)<=new Date())return "exp";if(i.max_uses&&i.uses>=i.max_uses)return "full";return "on"}
+function loadInvites(force){if(INV.busy||(!force&&Date.now()-INV.at<30000))return;INV.busy=true;
+  SB.client.from("invites").select("*").order("created_at",{ascending:false}).limit(40).then(({data})=>{INV.list=data||[];INV.at=Date.now();INV.busy=false;schedule()},()=>{INV.busy=false;INV.at=Date.now()})}
+function invitesCard(){
+  loadInvites();const L=INV.list||[];const on=L.filter(i=>invState(i)==="on"),off=L.filter(i=>invState(i)!=="on").slice(0,8);
+  const lbl={off:"Disattivato",exp:"Scaduto",full:"Esaurito"};
+  const row=i=>`<div class="li" style="flex-direction:column;align-items:stretch;gap:8px"><div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap"><b class="invcode">${h(i.code)}</b><div class="grow"><div class="t">${h(i.note||"Codice di invito")}</div><div class="small muted">valido fino al ${h(fDateTime(i.expires_at))} · ${i.max_uses?`usato ${i.uses} di ${i.max_uses}`:`usato ${i.uses} ${i.uses===1?"volta":"volte"}`}</div></div></div>
+    <div class="row" style="gap:6px"><a class="btn sm pri" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(invText(i))}">Invia su WhatsApp</a><button class="btn sm" data-invcopy="${h(i.code)}">Copia link</button><button class="btn sm ghost" data-invoff="${h(i.code)}">Disattiva</button></div></div>`;
+  return `<div class="card"><div class="ch"><div><h2>Codici di invito</h2><p class="small muted" style="margin-top:4px">Chi si registra con un codice valido entra subito come volontario. Quando il codice scade, chi è dentro resta dentro e chi è fuori deve essere approvato.</p></div></div>
+    <div class="row" style="margin-bottom:10px"><button class="btn pri" data-act="newInvite">${ic("plus")}Crea codice di invito</button></div>
+    ${INV.list===null?'<p class="small muted"><span class="spin"></span> Carico i codici…</p>':on.length?`<div class="list">${on.map(row).join("")}</div>`:'<p class="small muted">Nessun codice attivo.</p>'}
+    ${off.length?`<details style="margin-top:10px"><summary class="small muted">Codici non più validi (${off.length})</summary><div class="list">${off.map(i=>`<div class="li"><b class="invcode">${h(i.code)}</b><div class="grow"><div class="t">${h(i.note||"Codice di invito")}</div><div class="small muted">${lbl[invState(i)]} · usato ${i.uses} ${i.uses===1?"volta":"volte"}</div></div><button class="btn sm ghost" data-invdel="${h(i.code)}">Elimina</button></div>`).join("")}</div></details>`:""}</div>`;
+}
+const INV_DUR=[["24","1 giorno"],["72","3 giorni"],["168","1 settimana"],["336","2 settimane"],["720","1 mese"],["2160","3 mesi"]];
+function inviteForm(){
+  form({title:"Nuovo codice di invito",saveLabel:"Crea codice",fields:[
+    {k:"note",label:"Per chi è",ph:"Es. Gruppo WhatsApp volontari"},
+    [{k:"hours",label:"Vale per",type:"select",opts:INV_DUR,value:"168"},{k:"max",label:"Quante persone al massimo",type:"number",value:"",ph:"Nessun limite",hint:"Lascia vuoto per nessun limite"}]],
+   onSave:async o=>{const max=+o.max>0?Math.min(1000,Math.floor(+o.max)):null;
+     const {data,error}=await SB.client.rpc("create_invite",{hours:+o.hours||168,max_uses:max,note:String(o.note||"").slice(0,60)});
+     if(error||!data)throw{userMsg:"Non è stato possibile creare il codice."};
+     INV.at=0;loadInvites(true);setTimeout(()=>inviteReady({code:data,note:o.note||"",expires_at:new Date(Date.now()+(+o.hours||168)*3600e3).toISOString(),max_uses:max,uses:0}),250)}});
+}
+function inviteReady(i){
+  const m=modal("Codice creato",`<div style="text-align:center"><p class="small muted">Codice di invito</p><div class="invbig">${h(i.code)}</div><p class="small muted">Valido fino al ${h(fDateTime(i.expires_at))}${i.max_uses?` · per ${i.max_uses} ${i.max_uses===1?"persona":"persone"}`:""}</p></div>
+    <p class="small" style="margin-top:12px">Manda il link nel gruppo: chi lo apre trova il codice già scritto e, registrandosi, entra subito.</p><input class="inp" readonly value="${h(inviteLink(i.code))}" id="invlink" style="font-size:14px">`,
+    `<button class="btn" data-invcopy="${h(i.code)}">Copia link</button><a class="btn pri" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(invText(i))}">Invia su WhatsApp</a>`);
+}
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(_){const x=document.createElement("textarea");x.value=t;x.style.position="fixed";x.style.opacity="0";document.body.appendChild(x);x.select();let ok=false;try{ok=document.execCommand("copy")}catch(_){}x.remove();return ok}}
+document.addEventListener("click",async e=>{
+  if(ME.mode!=="supa")return;
+  const c=e.target.closest("[data-invcopy]");if(c){const ok=await copyText(inviteLink(c.dataset.invcopy));toast(ok?"Link copiato: incollalo nel gruppo":"Non riesco a copiare: tieni premuto sul link e copialo",!ok);return}
+  const o=e.target.closest("[data-invoff]");if(o){const code=o.dataset.invoff;confirmBox(`Disattivare il codice ${code}? Chi è già entrato resta dentro; nessun altro potrà più usarlo.`,"Disattiva",async()=>{const {error}=await SB.client.from("invites").update({revoked:true}).eq("code",code);if(error){toast("Non è stato possibile disattivarlo.",true);return}const i=(INV.list||[]).find(x=>x.code===code);if(i)i.revoked=true;toast("Codice disattivato");render(true)});return}
+  const d=e.target.closest("[data-invdel]");if(d){const code=d.dataset.invdel;const {error}=await SB.client.from("invites").delete().eq("code",code);if(error){toast("Non è stato possibile eliminarlo.",true);return}INV.list=(INV.list||[]).filter(x=>x.code!==code);render(true);return}
+});
 const ROLE_L={org:"Moderatore",vol:"Volontario",pending:"Da approvare",blocked:"Accesso tolto"};
 function sbAccessPage(){
   const me=SB.profile||{};const org=isEditor();if(org)sbLoadEmails();const em=id=>org&&SB.emails&&SB.emails[id]?h(SB.emails[id]):"";
   const all=[...S.members].sort((x,y)=>(x.name||"").localeCompare(y.name||"","it"));
   const pend=all.filter(m=>m.role==="pending"),act=all.filter(m=>m.role==="org"||m.role==="vol"),off=all.filter(m=>m.role==="blocked");
   const pill2=r=>`<span class="pill ${r==="org"?"s-conf":r==="vol"?"s-idea":r==="blocked"?"s-bad":"s-prep"}">${ROLE_L[r]||r}</span>`;
-  const row=m=>`<div class="li"><div class="grow"><div class="t">${h(m.name||"Senza nome")}${m.id===ME.id?' <span class="small muted">(tu)</span>':""}</div><div class="small muted">${[em(m.id),m.seen?"ultimo accesso "+fStamp(m.seen):"registrato "+fStamp(m.at)].filter(Boolean).join(" · ")}</div></div>
+  const row=m=>`<div class="li"><div class="grow"><div class="t">${h(m.name||"Senza nome")}${m.id===ME.id?' <span class="small muted">(tu)</span>':""}</div><div class="small muted">${[em(m.id),m.seen?"ultimo accesso "+fStamp(m.seen):"registrato "+fStamp(m.at),org&&m.inv?"entrato con codice "+h(m.inv):""].filter(Boolean).join(" · ")}</div></div>
     ${org&&m.id!==ME.id?`<select class="inl" data-setrole="${h(m.id)}" aria-label="Ruolo di ${h(m.name)}">${["vol","org","blocked"].map(r=>`<option value="${r}" ${m.role===r?"selected":""}>${ROLE_L[r]}</option>`).join("")}<option value="delete">🗑 Elimina account…</option></select>`:pill2(m.role)}</div>`;
   const link=location.origin+location.pathname;
   return `<div class="head"><div><div class="eyebrow">Il tuo account</div><h1>Accesso</h1></div></div>
   <div class="card"><div class="ch"><div><h2>${h(me.name||"")}</h2><p class="small muted">${h(SB.user?SB.user.email:"")}</p></div>${pill2(me.role)}</div>
    <div class="row"><button class="btn" data-act="editName">Cambia nome</button><button class="btn" data-act="changePw">${ic("key")}Cambia password</button><button class="btn danger" data-act="logout">${ic("lock")}Esci</button></div></div>
+  ${org?invitesCard():""}
   ${org&&pend.length?`<div class="card" style="border-color:var(--gold)"><div class="ch"><h2>Da approvare (${pend.length})</h2></div><p class="small muted" style="margin-bottom:10px">Approva solo le persone che conosci.</p><div class="list">${pend.map(m=>`<div class="li" style="flex-direction:column;align-items:stretch;gap:10px"><div><div class="t">${h(m.name||"Senza nome")}</div><div class="small muted">${[em(m.id),"registrato "+fStamp(m.at)].filter(Boolean).join(" · ")}</div></div><div class="row" style="gap:8px"><button class="btn sm pri" data-approve="${h(m.id)}" data-role="vol">Volontario</button><button class="btn sm" data-approve="${h(m.id)}" data-role="org">Moderatore</button><button class="btn sm ghost" data-approve="${h(m.id)}" data-role="blocked">Rifiuta</button></div></div>`).join("")}</div></div>`:""}
   ${org||act.length?`<div class="card"><div class="ch"><h2>Persone attive (${act.length})</h2></div><div class="list">${act.map(row).join("")}</div></div>`:""}
   ${org&&off.length?`<div class="card"><div class="ch"><h2>Accesso tolto (${off.length})</h2></div><p class="small muted" style="margin-bottom:10px">Queste persone non possono entrare. Puoi riattivarle scegliendo un ruolo, oppure eliminare del tutto l'account.</p><div class="list">${off.map(m=>`<div class="li" style="flex-direction:column;align-items:stretch;gap:10px">${row(m).replace(/^<div class="li">/,"<div class=\"row\" style=\"gap:12px;align-items:center;flex-wrap:nowrap\">")}<div class="row"><button class="btn sm danger" data-delacct="${h(m.id)}">Elimina account</button></div></div>`).join("")}</div></div>`:""}
   <div class="grid g2">
    <div class="card"><h2>Moderatori</h2><p class="small" style="margin-top:6px">Gestiscono eventi, stand, mappa, turni, magazzino, avvisi e foto, e approvano le nuove persone.</p></div>
    <div class="card"><h2>Volontari</h2><p class="small" style="margin-top:6px">Vedono tutto, indicano la disponibilità, propongono e votano idee, aggiornano attività e "dove va cosa".</p></div></div>
-  ${org?`<div class="card"><h2>Invitare nuovi volontari</h2><p class="small" style="margin-top:6px;max-width:65ch">Manda il link dell'app. La persona si registra con email e password, poi la trovi qui sopra in “Da approvare”.</p><div class="row" style="margin-top:10px"><a class="btn pri" style="text-decoration:none" href="https://wa.me/?text=${encodeURIComponent("Ciao! Questa è l'app della Pro Loco Smerillo per volontari e magazzino. Registrati qui: "+link)}" target="_blank" rel="noopener">Invita su WhatsApp</a></div></div>`:""}`;
+  ${org?`<div class="card"><h2>Invitare senza codice</h2><p class="small" style="margin-top:6px;max-width:65ch">Puoi anche mandare solo il link dell'app: la persona si registra e la trovi qui sopra in “Da approvare”.</p><div class="row" style="margin-top:10px"><a class="btn pri" style="text-decoration:none" href="https://wa.me/?text=${encodeURIComponent("Ciao! Questa è l'app della Pro Loco Smerillo per volontari e magazzino. Registrati qui: "+link)}" target="_blank" rel="noopener">Invita su WhatsApp</a></div></div>`:""}`;
 }
 document.addEventListener("click",e=>{
   const a=e.target.closest("[data-approve]");if(a&&ME.mode==="supa"){a.disabled=true;sbSetRole(a.dataset.approve,a.dataset.role);return}
