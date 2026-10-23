@@ -316,6 +316,10 @@ select.inl{border:1px solid var(--line);border-radius:6px;background:var(--surfa
 .bar.warn i{background:var(--bad)}
 .invcode{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;background:var(--gold-soft);color:var(--ink);padding:4px 8px;border-radius:6px;flex:none}
 .invbig{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:2rem;font-weight:700;letter-spacing:.14em;margin:6px 0 8px;color:var(--ink)}
+.mtcard{padding:0;overflow:hidden}.mthead{display:flex;gap:12px;align-items:center;width:100%;padding:16px;border:0;background:none;text-align:left;cursor:pointer;color:inherit;font:inherit}
+.mthead .t{font-weight:700}.mtchev{color:var(--muted);font-size:.8em}.mtbody{padding:0 16px 16px;border-top:1px solid var(--line)}
+.mtsec{margin-top:14px}.mtsec h3{font-size:1rem;margin:0 0 6px}
+.delbtn{flex:none}.mrow{flex-wrap:wrap;row-gap:8px}.mrow>.grow{min-width:180px}.mctl{display:flex;gap:8px;align-items:center}
 .spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--gold);animation:sp 0.8s linear infinite;display:inline-block}
 @keyframes sp{to{transform:rotate(360deg)}}
 .comments{display:flex;flex-direction:column;gap:8px}
@@ -867,6 +871,7 @@ const I={
  list:'<path d="M9 6h12M9 12h12M9 18h12"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>',
  box:'<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
  photo:'<rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/>',
+ meet:'<path d="M4 5h16v10H9l-5 4z"/><path d="M8 9h8M8 12h5"/>',
  mega:'<path d="M3 10v4h3l7 4V6L6 10z"/><path d="M17 9a4 4 0 0 1 0 6"/>',
  arch:'<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v11h14V9M10 13h4"/>',
  more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
@@ -975,7 +980,7 @@ async function startNewEdition(){
 }
 /* ---------- stato e archivio dati ---------- */
 const COLL={events:"org/x/events",layouts:"org/x/layouts",stands:"org/x/stands",pois:"org/x/pois",inventory:"org/x/inventory",alloc:"pub/x/alloc",members:"pub/x/members",notices:"org/x/notices",materials:"org/x/materials",shifts:"org/x/shifts",photos:"org/x/photos",settings:"org/x/settings",
-            ideas:"pub/x/ideas",tasks:"pub/x/tasks",avail:"pub/x/avail"};
+            ideas:"pub/x/ideas",tasks:"pub/x/tasks",avail:"pub/x/avail",meetings:"org/x/meetings"};
 const S={}; Object.keys(COLL).forEach(k=>S[k]=[]);
 const ME={id:null,name:"",role:"read",mode:"loading",assets:null,user:null};
 const NAMES={};
@@ -1079,13 +1084,13 @@ let waiting=false;
 let ANIM="page";
 function go(page,id=null,tab=null){ANIM=(page===R.page&&id===R.id)?"tab":"page";R.page=page;R.id=id;R.tab=tab;window.scrollTo({top:0});render(true)}
 
-const NAV=[["home","Home","home"],["vol","Volontari","people"],["mag","Magazzino","box"],["cal","Calendario","cal"],["tasks","Attività","list"],["cast","Castagnata","star"],["notices","Avvisi","mega"],["ideas","Idee","bulb"],["photos","Foto","photo"],["archive","Archivio","arch"],["access","Accesso","key"]];
+const NAV=[["home","Home","home"],["vol","Volontari","people"],["mag","Magazzino","box"],["cal","Calendario","cal"],["tasks","Attività","list"],["cast","Castagnata","star"],["notices","Avvisi","mega"],["meet","Riunioni","meet"],["ideas","Idee","bulb"],["photos","Foto","photo"],["archive","Archivio","arch"],["access","Accesso","key"]];
 const TABS=["home","cal","cast","vol","more"];
 function navActive(p){if(p==="event")return "cal";if(p==="mat")return "mag";return p}
 function renderNav(){
   const act=navActive(R.page);
   $("#side").innerHTML=`<div class="brand"><img src="${LOGO}" alt="Logo Pro Loco Smerillo"><div><b>Pro Loco Smerillo</b><span>Area organizzativa</span></div></div>
-   ${NAV.map((n,i)=>(i===5||i===10?'<div class="navsep"></div>':"")+`<button class="navbtn" data-go="${n[0]}" ${act===n[0]?'aria-current="page"':""}>${ic(n[2])}${n[1]}${n[0]==="notices"?badge(unread().length):""}</button>`).join("")}
+   ${NAV.map((n,i)=>(n[0]==="cast"||n[0]==="access"?'<div class="navsep"></div>':"")+`<button class="navbtn" data-go="${n[0]}" ${act===n[0]?'aria-current="page"':""}>${ic(n[2])}${n[1]}${n[0]==="notices"?badge(unread().length):""}</button>`).join("")}
    <button class="navbtn" data-act="textSize"><span class="aa">A<span>A</span></span>Grandezza testo<span class="tsnow">${TS_LABEL[textSize()]}</span></button>
    <div class="who">${roleLabel()}</div>`;
   const moreAct=!["home","vol","mag","cast"].includes(act);
@@ -1868,6 +1873,51 @@ PAGES.notices=()=>{const arr=noticesSorted(NF.arch);
   return `<div class="head"><div><div class="eyebrow">Comunicazioni interne</div><h1>Avvisi</h1><p>Le comunicazioni importanti per tutti i volontari. Quelle più importanti restano in alto.</p></div><div class="row"><button class="chip" data-act="toggleArch" aria-pressed="${NF.arch}">Archiviati</button>${isOrg()?`<button class="btn pri" data-act="newNotice">${ic("plus")}Nuovo avviso</button>`:""}</div></div>
   <div class="card">${arr.length?`<div class="list">${arr.map(n=>`<div class="li ${unread().some(u=>u.id===n.id)?"isnew":""}"><div class="grow"><div class="row"><span class="t">${h(n.title)}</span>${unread().some(u=>u.id===n.id)?'<span class="pill s-bad nodot">Nuovo</span>':""}${n.pinned?'<span class="pill s-prep nodot">Fissato</span>':""}</div><div class="pre" style="margin-top:4px">${h(n.text)}</div><div class="small muted" style="margin-top:6px">${h(who(n.by))} · ${fStamp(n.at)}</div></div>${isOrg()?`<div class="row nact" style="flex:none"><button class="btn sm ghost" data-npin="${h(n.id)}" aria-label="${n.pinned?"Sgancia":"Fissa in alto"}">${ic("pin")}</button><button class="btn sm" data-narch="${h(n.id)}">${n.archived?"Ripristina":"Archivia"}</button><button class="btn sm ghost" data-nedit="${h(n.id)}">Modifica</button><button class="btn sm" data-nwa="${h(n.id)}">WhatsApp</button></div>`:""}</div>`).join("")}</div>`:emptyBox(NF.arch?"Nessun avviso archiviato":"Nessun avviso",NF.arch?"":"Le comunicazioni importanti si possono fissare in alto.")}</div>`;};
 
+/* riunioni: resoconti per i volontari */
+const MF={open:null};
+function meetSorted(){return [...S.meetings].sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.at||"").localeCompare(a.at||""))}
+function meetBlock(label,txt,icn){return txt&&String(txt).trim()?`<div class="mtsec"><h3>${icn} ${label}</h3><div class="pre">${h(txt)}</div></div>`:""}
+PAGES.meet=()=>{const arr=meetSorted();const open=MF.open||(arr[0]&&arr[0].id);
+  return `<div class="head"><div><div class="eyebrow">Comunicazioni interne</div><h1>Riunioni</h1><p>Com'è andata ogni riunione: di cosa si è parlato, cosa si è deciso e cosa c'è da fare.</p></div>${isOrg()?`<div class="row"><button class="btn pri" data-act="newMeet">${ic("plus")}Nuovo resoconto</button></div>`:""}</div>
+  ${arr.length?arr.map(m=>{const isOpen=m.id===open;return `<div class="card mtcard"><button class="mthead" data-mtopen="${h(m.id)}" aria-expanded="${isOpen}">${dateBox(m.date)}<div class="grow"><div class="t">${h(m.title||"Riunione")}</div><div class="small muted">${h([m.place,m.present&&("Presenti: "+String(m.present).split(/[,\n]/).filter(x=>x.trim()).length)].filter(Boolean).join(" · "))}</div></div><span class="mtchev">${isOpen?"▲":"▼"}</span></button>
+    ${isOpen?`<div class="mtbody">${m.present?`<p class="small"><b>Presenti:</b> ${h(m.present)}</p>`:""}
+      ${meetBlock("Di cosa si è parlato",m.talk,"💬")}${meetBlock("Cosa si è deciso",m.decided,"✅")}${meetBlock("Cosa c'è da fare",m.todo,"📋")}
+      ${m.next?`<p class="small" style="margin-top:10px"><b>Prossima riunione:</b> ${h(fShort(m.next))}${m.nextNote?" · "+h(m.nextNote):""}</p>`:""}
+      <p class="small muted" style="margin-top:10px">Scritto da ${h(who(m.by))} · ${fStamp(m.at)}</p>
+      <div class="row" style="margin-top:10px"><button class="btn sm" data-mtwa="${h(m.id)}">WhatsApp</button>${isOrg()?`<button class="btn sm ghost" data-mtedit="${h(m.id)}">Modifica</button>`:""}</div></div>`:""}</div>`}).join("")
+   :`<div class="card">${emptyBox("Nessun resoconto",isOrg()?"Dopo ogni riunione scrivi qui com'è andata: i volontari lo leggono e ricevono un avviso.":"Qui troverai com'è andata ogni riunione della Pro Loco.",isOrg()?`<button class="btn pri" data-act="newMeet">${ic("plus")}Primo resoconto</button>`:"")}</div>`}`;};
+function meetWaText(m){return `🗓 *Pro Loco Smerillo — ${m.title||"Riunione"}*${m.date?" ("+fShort(m.date)+")":""}\n`+
+  (m.talk?`\n💬 *Di cosa si è parlato*\n${m.talk}\n`:"")+(m.decided?`\n✅ *Cosa si è deciso*\n${m.decided}\n`:"")+(m.todo?`\n📋 *Cosa c'è da fare*\n${m.todo}\n`:"")+(m.next?`\nProssima riunione: ${fShort(m.next)}${m.nextNote?" · "+m.nextNote:""}`:"")}
+function meetForm(m={}){
+  form({title:m.id?"Modifica resoconto":"Resoconto della riunione",wide:true,fields:[
+    {k:"title",label:"Titolo",value:m.title||"Riunione della Pro Loco",req:1},
+    [{k:"date",label:"Data della riunione",type:"date",value:m.date||todayRome(),req:1},{k:"place",label:"Dove",value:m.place,ph:"Es. Sede della Pro Loco"}],
+    {k:"present",label:"Presenti",type:"textarea",value:m.present,ph:"Nomi separati da virgola",list:"dl-names"},
+    {k:"talk",label:"Di cosa si è parlato",type:"textarea",value:m.talk,req:1,ph:"Gli argomenti della riunione, uno per riga"},
+    {k:"decided",label:"Cosa si è deciso",type:"textarea",value:m.decided,ph:"Le decisioni prese, una per riga"},
+    {k:"todo",label:"Cosa c'è da fare",type:"textarea",value:m.todo,ph:"Es. Mario: prenotare i gazebo entro venerdì"},
+    [{k:"next",label:"Prossima riunione",type:"date",value:m.next||""},{k:"nextNote",label:"Ora e luogo",value:m.nextNote,ph:"Es. ore 21, in sede"}],
+    ...(m.id?[]:[{k:"notify",label:"Avvisa i volontari (compare tra gli Avvisi con il pallino rosso)",type:"checkbox",value:true}])],
+   onSave:async o=>{const notify=o.notify;delete o.notify;
+     if(m.id){await act(()=>store.upd("meetings",m.id,o),"Resoconto aggiornato");return}
+     const id=await act(()=>store.add("meetings",{...o,by:ME.id||"",at:nowISO()}),"Resoconto pubblicato");MF.open=id;
+     if(notify){const n={title:`Resoconto: ${o.title}`,text:`Com'è andata la riunione del ${fShort(o.date)}.`+(o.decided?`\n\nDecisioni:\n${o.decided}`:"")+`\n\nIl resoconto completo è nella pagina Riunioni.`,pinned:false,archived:false,by:ME.id||"",at:nowISO()};
+       try{await store.add("notices",n)}catch(_){}}
+     setTimeout(()=>meetShare({...o,id}),350)},
+   onDelete:m.id?async()=>act(()=>store.del("meetings",m.id),"Resoconto eliminato"):null});
+}
+function meetShare(m){
+  const t=meetWaText(m);
+  const md=modal("Mandalo anche su WhatsApp?",`<p>Il resoconto è pubblicato nell'app. Vuoi mandarlo anche nel gruppo dei volontari?</p><div class="waprev pre">${h(t.replace(/\*/g,""))}</div>`,
+   `<button class="btn" data-close>No, grazie</button><button class="btn" id="mtcopy">${ic("copy")}Copia testo</button><a class="btn wa" href="https://wa.me/?text=${encodeURIComponent(t)}" target="_blank" rel="noopener">Apri WhatsApp</a>`);
+  $("#mtcopy",md.el).onclick=()=>copyText(t);
+}
+document.addEventListener("click",e=>{
+  const o=e.target.closest("[data-mtopen]");if(o){MF.open=MF.open===o.dataset.mtopen&&o.getAttribute("aria-expanded")==="true"?"__none":o.dataset.mtopen;render();return}
+  const w=e.target.closest("[data-mtwa]");if(w){const m=S.meetings.find(x=>x.id===w.dataset.mtwa);if(m)meetShare(m);return}
+  const ed=e.target.closest("[data-mtedit]");if(ed){const m=S.meetings.find(x=>x.id===ed.dataset.mtedit);if(m&&isOrg())meetForm(m);return}
+});
+
 /* archivio */
 PAGES.archive=()=>{const done=S.events.filter(e=>e.status==="done").sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   return `<div class="head"><div><div class="eyebrow">Edizioni passate</div><h1>Archivio eventi</h1><p>Programma svolto, problemi riscontrati e idee per la prossima volta. Duplica un evento per ripartire da attività e pianta già pronte.</p></div></div>
@@ -2314,6 +2364,7 @@ document.addEventListener("click",async e=>{
     case "newMat":matForm({},d.ev);break;
     case "newItem":itemForm();break;
     case "scanMag":scanMag();break;
+    case "newMeet":if(isOrg())meetForm();break;
     case "newInvite":if(ME.mode==="supa"&&isEditor())inviteForm();break;
     case "newEdition":confirmBox(`Preparare la ${castAuto().ed}ª Castagnata? La ${(+((S.settings.find(x=>x.id==="castagnata")||{}).edition)||CAST_BASE.ed)}ª va in Archivio con turni, attività completate, consegne e una copia della pianta. Stand, magazzino e foto restano.`,"Prepara la nuova edizione",async()=>{await act(()=>startNewEdition(),"Nuova edizione pronta");render(true)});break;
     case "standPhotos":{const ov=t.closest(".ov");if(ov)ov.remove();standPhotosModal(d.name,d.color,d.n);break}
@@ -2689,10 +2740,10 @@ function inviteReady(i){
     <p class="small" style="margin-top:12px">Manda il link nel gruppo: chi lo apre trova il codice già scritto e, registrandosi, entra subito.</p><input class="inp" readonly value="${h(inviteLink(i.code))}" id="invlink" style="font-size:14px">`,
     `<button class="btn" data-invcopy="${h(i.code)}">Copia link</button><a class="btn pri" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(invText(i))}">Invia su WhatsApp</a>`);
 }
-async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(_){const x=document.createElement("textarea");x.value=t;x.style.position="fixed";x.style.opacity="0";document.body.appendChild(x);x.select();let ok=false;try{ok=document.execCommand("copy")}catch(_){}x.remove();return ok}}
+async function clipCopy(t){try{await navigator.clipboard.writeText(t);return true}catch(_){const x=document.createElement("textarea");x.value=t;x.style.position="fixed";x.style.opacity="0";document.body.appendChild(x);x.select();let ok=false;try{ok=document.execCommand("copy")}catch(_){}x.remove();return ok}}
 document.addEventListener("click",async e=>{
   if(ME.mode!=="supa")return;
-  const c=e.target.closest("[data-invcopy]");if(c){const ok=await copyText(inviteLink(c.dataset.invcopy));toast(ok?"Link copiato: incollalo nel gruppo":"Non riesco a copiare: tieni premuto sul link e copialo",!ok);return}
+  const c=e.target.closest("[data-invcopy]");if(c){const ok=await clipCopy(inviteLink(c.dataset.invcopy));toast(ok?"Link copiato: incollalo nel gruppo":"Non riesco a copiare: tieni premuto sul link e copialo",!ok);return}
   const o=e.target.closest("[data-invoff]");if(o){const code=o.dataset.invoff;confirmBox(`Disattivare il codice ${code}? Chi è già entrato resta dentro; nessun altro potrà più usarlo.`,"Disattiva",async()=>{const {error}=await SB.client.from("invites").update({revoked:true}).eq("code",code);if(error){toast("Non è stato possibile disattivarlo.",true);return}const i=(INV.list||[]).find(x=>x.code===code);if(i)i.revoked=true;toast("Codice disattivato");render(true)});return}
   const d=e.target.closest("[data-invdel]");if(d){const code=d.dataset.invdel;const {error}=await SB.client.from("invites").delete().eq("code",code);if(error){toast("Non è stato possibile eliminarlo.",true);return}INV.list=(INV.list||[]).filter(x=>x.code!==code);render(true);return}
 });
@@ -2702,8 +2753,8 @@ function sbAccessPage(){
   const all=[...S.members].sort((x,y)=>(x.name||"").localeCompare(y.name||"","it"));
   const pend=all.filter(m=>m.role==="pending"),act=all.filter(m=>m.role==="org"||m.role==="vol"),off=all.filter(m=>m.role==="blocked");
   const pill2=r=>`<span class="pill ${r==="org"?"s-conf":r==="vol"?"s-idea":r==="blocked"?"s-bad":"s-prep"}">${ROLE_L[r]||r}</span>`;
-  const row=m=>`<div class="li"><div class="grow"><div class="t">${h(m.name||"Senza nome")}${m.id===ME.id?' <span class="small muted">(tu)</span>':""}</div><div class="small muted">${[em(m.id),m.seen?"ultimo accesso "+fStamp(m.seen):"registrato "+fStamp(m.at),org&&m.inv?"entrato con codice "+h(m.inv):""].filter(Boolean).join(" · ")}</div></div>
-    ${org&&m.id!==ME.id?`<select class="inl" data-setrole="${h(m.id)}" aria-label="Ruolo di ${h(m.name)}">${["vol","org","blocked"].map(r=>`<option value="${r}" ${m.role===r?"selected":""}>${ROLE_L[r]}</option>`).join("")}<option value="delete">🗑 Elimina account…</option></select>`:pill2(m.role)}</div>`;
+  const row=m=>`<div class="li mrow"><div class="grow"><div class="t">${h(m.name||"Senza nome")}${m.id===ME.id?' <span class="small muted">(tu)</span>':""}</div><div class="small muted">${[em(m.id),m.seen?"ultimo accesso "+fStamp(m.seen):"registrato "+fStamp(m.at),org&&m.inv?"entrato con codice "+h(m.inv):""].filter(Boolean).join(" · ")}</div></div>
+    ${org&&m.id!==ME.id?`<div class="mctl"><select class="inl" data-setrole="${h(m.id)}" aria-label="Ruolo di ${h(m.name)}">${["vol","org","blocked"].map(r=>`<option value="${r}" ${m.role===r?"selected":""}>${ROLE_L[r]}</option>`).join("")}<option value="delete">🗑 Elimina account…</option></select><button class="btn sm ghost delbtn" data-delask="${h(m.id)}" aria-label="Elimina l'account di ${h(m.name)}" title="Elimina account">🗑 Elimina</button></div>`:pill2(m.role)}</div>`;
   const link=location.origin+location.pathname;
   return `<div class="head"><div><div class="eyebrow">Il tuo account</div><h1>Accesso</h1></div></div>
   <div class="card"><div class="ch"><div><h2>${h(me.name||"")}</h2><p class="small muted">${h(SB.user?SB.user.email:"")}</p></div>${pill2(me.role)}</div>
@@ -2711,7 +2762,7 @@ function sbAccessPage(){
   ${org?invitesCard():""}
   ${org&&pend.length?`<div class="card" style="border-color:var(--gold)"><div class="ch"><h2>Da approvare (${pend.length})</h2></div><p class="small muted" style="margin-bottom:10px">Approva solo le persone che conosci.</p><div class="list">${pend.map(m=>`<div class="li" style="flex-direction:column;align-items:stretch;gap:10px"><div><div class="t">${h(m.name||"Senza nome")}</div><div class="small muted">${[em(m.id),"registrato "+fStamp(m.at)].filter(Boolean).join(" · ")}</div></div><div class="row" style="gap:8px"><button class="btn sm pri" data-approve="${h(m.id)}" data-role="vol">Volontario</button><button class="btn sm" data-approve="${h(m.id)}" data-role="org">Moderatore</button><button class="btn sm ghost" data-approve="${h(m.id)}" data-role="blocked">Rifiuta</button></div></div>`).join("")}</div></div>`:""}
   ${org||act.length?`<div class="card"><div class="ch"><h2>Persone attive (${act.length})</h2></div><div class="list">${act.map(row).join("")}</div></div>`:""}
-  ${org&&off.length?`<div class="card"><div class="ch"><h2>Accesso tolto (${off.length})</h2></div><p class="small muted" style="margin-bottom:10px">Queste persone non possono entrare. Puoi riattivarle scegliendo un ruolo, oppure eliminare del tutto l'account.</p><div class="list">${off.map(m=>`<div class="li" style="flex-direction:column;align-items:stretch;gap:10px">${row(m).replace(/^<div class="li">/,"<div class=\"row\" style=\"gap:12px;align-items:center;flex-wrap:nowrap\">")}<div class="row"><button class="btn sm danger" data-delacct="${h(m.id)}">Elimina account</button></div></div>`).join("")}</div></div>`:""}
+  ${org&&off.length?`<div class="card"><div class="ch"><h2>Accesso tolto (${off.length})</h2></div><p class="small muted" style="margin-bottom:10px">Queste persone non possono entrare. Puoi riattivarle scegliendo un ruolo, oppure eliminare del tutto l'account.</p><div class="list">${off.map(row).join("")}</div></div>`:""}
   <div class="grid g2">
    <div class="card"><h2>Moderatori</h2><p class="small" style="margin-top:6px">Gestiscono eventi, stand, mappa, turni, magazzino, avvisi e foto, e approvano le nuove persone.</p></div>
    <div class="card"><h2>Volontari</h2><p class="small" style="margin-top:6px">Vedono tutto, indicano la disponibilità, propongono e votano idee, aggiornano attività e "dove va cosa".</p></div></div>
@@ -2734,6 +2785,8 @@ async function sbDeleteAcct(id){
   catch(e){console.error(e);toast(e&&e.message&&e.message!=="x"?e.message:"Eliminazione non riuscita: controlla la connessione e riprova.",true);render(true)}
 }
 document.addEventListener("click",e=>{
+  const q=e.target.closest("[data-delask]");if(q&&ME.mode==="supa"){const m=S.members.find(x=>x.id===q.dataset.delask);
+    confirmBox(`Eliminare per sempre l'account di ${m?m.name:"questa persona"}? Non potrà più entrare con questa email, a meno che non si registri di nuovo. Quello che ha scritto nell'app resta.`,"Elimina account",async()=>sbDeleteAcct(q.dataset.delask));return}
   const d=e.target.closest("[data-delacct]");if(!d||ME.mode!=="supa")return;const m=S.members.find(x=>x.id===d.dataset.delacct);
   confirmBox(`Eliminare per sempre l'account di ${m?m.name:"questa persona"}? Non potrà più accedere con questa email, a meno che non si registri di nuovo. Quello che ha scritto nell'app (idee, attività) resta.`,"Elimina account",async()=>sbDeleteAcct(d.dataset.delacct));
 });
