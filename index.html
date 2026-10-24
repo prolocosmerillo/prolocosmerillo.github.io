@@ -316,9 +316,36 @@ select.inl{border:1px solid var(--line);border-radius:6px;background:var(--surfa
 .bar.warn i{background:var(--bad)}
 .invcode{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;background:var(--gold-soft);color:var(--ink);padding:4px 8px;border-radius:6px;flex:none}
 .invbig{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:2rem;font-weight:700;letter-spacing:.14em;margin:6px 0 8px;color:var(--ink)}
-.mtcard{padding:0;overflow:hidden}.mthead{display:flex;gap:12px;align-items:center;width:100%;padding:16px;border:0;background:none;text-align:left;cursor:pointer;color:inherit;font:inherit}
-.mthead .t{font-weight:700}.mtchev{color:var(--muted);font-size:.8em}.mtbody{padding:0 16px 16px;border-top:1px solid var(--line)}
-.mtsec{margin-top:14px}.mtsec h3{font-size:1rem;margin:0 0 6px}
+.mtlist{display:flex;flex-direction:column;gap:14px}
+.card.mtcard{padding:0!important;overflow:hidden;transition:box-shadow .2s ease}
+.mtcard.open{box-shadow:0 1px 2px rgba(40,35,20,.06),0 10px 28px rgba(40,35,20,.10)}
+.mthead{display:flex;gap:14px;align-items:flex-start;width:100%;padding:18px;border:0;background:none;text-align:left;cursor:pointer;color:inherit;font:inherit}
+.mtdate{flex:none;width:56px;border-radius:12px;background:var(--green);color:#fff;text-align:center;padding:8px 0 6px;line-height:1}
+.mtdate b{display:block;font-family:var(--f-display);font-size:1.5rem}.mtdate span{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;opacity:.9}
+.mttitle{font-family:var(--f-display);font-size:1.15rem;margin:2px 0 6px;line-height:1.25}
+.mtmeta{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--muted);font-size:.9rem}
+.mtpeek{margin:8px 0 0;color:var(--muted);font-size:.92rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mtchev{flex:none;width:30px;height:30px;border-radius:50%;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--muted)}
+.mtbody{padding:0 18px 18px;display:flex;flex-direction:column;gap:12px}
+.mtppl{display:flex;flex-wrap:wrap;gap:6px;padding-top:2px}
+.pchip{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border-radius:999px;padding:3px 10px 3px 3px;font-size:.88rem}
+.pchip i{font-style:normal;width:24px;height:24px;border-radius:50%;background:var(--gold-soft);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700}
+.mtsec{border-radius:12px;padding:12px 14px;border-left:4px solid var(--line);background:var(--surface-2)}
+.mtsec h3{display:flex;align-items:center;gap:8px;font-family:var(--f-body);font-size:.95rem;font-weight:700;margin:0 0 6px}
+.mtsec ul{margin:0;padding-left:20px}.mtsec li{margin:3px 0}.mtsec p{margin:0}
+.mtsec.talk{background:var(--info-soft);border-color:var(--info)}.mtsec.dec{background:var(--ok-soft);border-color:var(--ok)}.mtsec.todo{background:var(--warn-soft);border-color:var(--warn)}
+.mtnext{display:flex;gap:10px;align-items:center;border:1.5px dashed var(--gold);border-radius:12px;padding:10px 14px}.mtnext>span{font-size:1.4rem}
+.mtfoot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;border-top:1px solid var(--line);padding-top:12px}.mtfoot .sp{flex:1}
+.mtform fieldset{border:0;padding:0;margin:0 0 18px;min-width:0}
+.mtform legend{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1rem;margin-bottom:10px;padding:0}
+.mtform legend>span{width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem}
+.mtform legend small{font-weight:400;color:var(--muted)}.pcount{color:var(--green);font-weight:700}
+.picks{display:flex;flex-wrap:wrap;gap:8px;max-height:240px;overflow:auto;padding:2px}
+.pick{display:inline-flex;align-items:center;gap:8px;min-height:42px;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 14px 4px 4px;font:inherit;font-size:.95rem;cursor:pointer;color:var(--ink)}
+.pick i{font-style:normal;width:32px;height:32px;border-radius:50%;background:var(--surface-2);color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700}
+.pick.on{border-color:var(--green);background:var(--green-soft)}.pick.on i{background:var(--green);color:#fff;font-size:.95rem}
+.addname{display:flex;gap:8px;margin-top:10px}.addname button{flex:none}.addname input{flex:1;min-width:0;width:auto;border:1.5px solid var(--line);border-radius:8px;background:var(--bg);padding:9px 10px;font-size:16px;min-height:48px}
+.mtnotify{display:flex;gap:12px;align-items:flex-start;background:var(--surface-2);border-radius:12px;padding:12px 14px;cursor:pointer}.mtnotify input{width:22px;height:22px;margin-top:2px;accent-color:var(--green)}
 .delbtn{flex:none}.mrow{flex-wrap:wrap;row-gap:8px}.mrow>.grow{min-width:180px}.mctl{display:flex;gap:8px;align-items:center}
 .spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--gold);animation:sp 0.8s linear infinite;display:inline-block}
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -1876,35 +1903,89 @@ PAGES.notices=()=>{const arr=noticesSorted(NF.arch);
 /* riunioni: resoconti per i volontari */
 const MF={open:null};
 function meetSorted(){return [...S.meetings].sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.at||"").localeCompare(a.at||""))}
-function meetBlock(label,txt,icn){return txt&&String(txt).trim()?`<div class="mtsec"><h3>${icn} ${label}</h3><div class="pre">${h(txt)}</div></div>`:""}
-PAGES.meet=()=>{const arr=meetSorted();const open=MF.open||(arr[0]&&arr[0].id);
-  return `<div class="head"><div><div class="eyebrow">Comunicazioni interne</div><h1>Riunioni</h1><p>Com'è andata ogni riunione: di cosa si è parlato, cosa si è deciso e cosa c'è da fare.</p></div>${isOrg()?`<div class="row"><button class="btn pri" data-act="newMeet">${ic("plus")}Nuovo resoconto</button></div>`:""}</div>
-  ${arr.length?arr.map(m=>{const isOpen=m.id===open;return `<div class="card mtcard"><button class="mthead" data-mtopen="${h(m.id)}" aria-expanded="${isOpen}">${dateBox(m.date)}<div class="grow"><div class="t">${h(m.title||"Riunione")}</div><div class="small muted">${h([m.place,m.present&&("Presenti: "+String(m.present).split(/[,\n]/).filter(x=>x.trim()).length)].filter(Boolean).join(" · "))}</div></div><span class="mtchev">${isOpen?"▲":"▼"}</span></button>
-    ${isOpen?`<div class="mtbody">${m.present?`<p class="small"><b>Presenti:</b> ${h(m.present)}</p>`:""}
-      ${meetBlock("Di cosa si è parlato",m.talk,"💬")}${meetBlock("Cosa si è deciso",m.decided,"✅")}${meetBlock("Cosa c'è da fare",m.todo,"📋")}
-      ${m.next?`<p class="small" style="margin-top:10px"><b>Prossima riunione:</b> ${h(fShort(m.next))}${m.nextNote?" · "+h(m.nextNote):""}</p>`:""}
-      <p class="small muted" style="margin-top:10px">Scritto da ${h(who(m.by))} · ${fStamp(m.at)}</p>
-      <div class="row" style="margin-top:10px"><button class="btn sm" data-mtwa="${h(m.id)}">WhatsApp</button>${isOrg()?`<button class="btn sm ghost" data-mtedit="${h(m.id)}">Modifica</button>`:""}</div></div>`:""}</div>`}).join("")
+const meetPeople=m=>Array.isArray(m.people)?m.people:String(m.present||"").split(/[,\n]/).map(x=>x.trim()).filter(Boolean);
+const meetLines=t=>String(t||"").split(/\n+/).map(x=>x.replace(/^\s*[-•*·]\s*/,"").trim()).filter(Boolean);
+const initials=n=>String(n||"?").trim().split(/\s+/).slice(0,2).map(w=>w[0]||"").join("").toUpperCase()||"?";
+function meetSec(cls,icon,label,txt){const L=meetLines(txt);if(!L.length)return "";
+  return `<section class="mtsec ${cls}"><h3><span class="mtic" aria-hidden="true">${icon}</span>${label}</h3>${L.length>1?`<ul>${L.map(x=>`<li>${h(x)}</li>`).join("")}</ul>`:`<p>${h(L[0])}</p>`}</section>`}
+function meetCard(m,isOpen){
+  const P=meetPeople(m);const first=meetLines(m.decided)[0]||meetLines(m.talk)[0]||"";
+  return `<article class="card mtcard ${isOpen?"open":""}">
+    <button class="mthead" data-mtopen="${h(m.id)}" aria-expanded="${isOpen}">
+      <div class="mtdate"><b class="num">${m.date?fmt(m.date,{day:"numeric"}):"—"}</b><span>${m.date?fmt(m.date,{month:"short"}):""}</span></div>
+      <div class="grow"><h2 class="mttitle">${h(m.title||"Riunione")}</h2>
+        <div class="mtmeta">${m.place?`<span>📍 ${h(m.place)}</span>`:""}${P.length?`<span>👥 ${P.length} ${P.length===1?"presente":"presenti"}</span>`:""}</div>
+        ${!isOpen&&first?`<p class="mtpeek">${h(first)}</p>`:""}</div>
+      <span class="mtchev" aria-hidden="true">${isOpen?"−":"+"}</span></button>
+    ${isOpen?`<div class="mtbody">
+      ${P.length?`<div class="mtppl" aria-label="Presenti">${P.map(n=>`<span class="pchip"><i>${h(initials(n))}</i>${h(n)}</span>`).join("")}</div>`:""}
+      ${meetSec("talk","💬","Di cosa si è parlato",m.talk)}${meetSec("dec","✅","Cosa si è deciso",m.decided)}${meetSec("todo","📋","Cosa c'è da fare",m.todo)}
+      ${m.next?`<div class="mtnext"><span>📅</span><div><b>Prossima riunione</b><div>${h(fmt(m.next,{weekday:"long",day:"numeric",month:"long"}))}${m.nextNote?" · "+h(m.nextNote):""}</div></div></div>`:""}
+      <footer class="mtfoot"><span class="small muted">Scritto da ${h(who(m.by))} · ${fStamp(m.at)}</span><span class="sp"></span>
+        <button class="btn sm" data-mtwa="${h(m.id)}">Manda su WhatsApp</button>${isOrg()?`<button class="btn sm ghost" data-mtedit="${h(m.id)}">Modifica</button>`:""}</footer></div>`:""}
+  </article>`;
+}
+PAGES.meet=()=>{const arr=meetSorted();const open=MF.open===null?(arr[0]&&arr[0].id):MF.open;
+  return `<div class="head"><div><div class="eyebrow">Comunicazioni interne</div><h1>Riunioni</h1><p>Com'è andata ogni riunione: chi c'era, di cosa si è parlato, cosa si è deciso e cosa c'è da fare.</p></div>${isOrg()?`<div class="row"><button class="btn pri" data-act="newMeet">${ic("plus")}Nuovo resoconto</button></div>`:""}</div>
+  ${arr.length?`<div class="mtlist">${arr.map(m=>meetCard(m,m.id===open)).join("")}</div>`
    :`<div class="card">${emptyBox("Nessun resoconto",isOrg()?"Dopo ogni riunione scrivi qui com'è andata: i volontari lo leggono e ricevono un avviso.":"Qui troverai com'è andata ogni riunione della Pro Loco.",isOrg()?`<button class="btn pri" data-act="newMeet">${ic("plus")}Primo resoconto</button>`:"")}</div>`}`;};
-function meetWaText(m){return `🗓 *Pro Loco Smerillo — ${m.title||"Riunione"}*${m.date?" ("+fShort(m.date)+")":""}\n`+
-  (m.talk?`\n💬 *Di cosa si è parlato*\n${m.talk}\n`:"")+(m.decided?`\n✅ *Cosa si è deciso*\n${m.decided}\n`:"")+(m.todo?`\n📋 *Cosa c'è da fare*\n${m.todo}\n`:"")+(m.next?`\nProssima riunione: ${fShort(m.next)}${m.nextNote?" · "+m.nextNote:""}`:"")}
+function meetWaText(m){const P=meetPeople(m);const b=(t,L)=>L.length?`\n${t}\n${L.map(x=>"• "+x).join("\n")}\n`:"";
+  return `🗓 *Pro Loco Smerillo — ${m.title||"Riunione"}*${m.date?" ("+fShort(m.date)+")":""}\n`+(P.length?`👥 Presenti: ${P.join(", ")}\n`:"")+
+  b("💬 *Di cosa si è parlato*",meetLines(m.talk))+b("✅ *Cosa si è deciso*",meetLines(m.decided))+b("📋 *Cosa c'è da fare*",meetLines(m.todo))+
+  (m.next?`\n📅 Prossima riunione: ${fShort(m.next)}${m.nextNote?" · "+m.nextNote:""}`:"")}
+/* elenco dei nomi da proporre: persone registrate, poi chi compare altrove nell'app e nelle riunioni passate */
+function meetNameOptions(extra=[]){
+  const seen=new Map();const add=n=>{n=String(n||"").trim().replace(/\s+/g," ");if(n&&!seen.has(n.toLowerCase()))seen.set(n.toLowerCase(),n)};
+  (S.members||[]).filter(m=>m.role!=="blocked"&&m.role!=="pending").map(m=>m.name).sort((a,b)=>a.localeCompare(b,"it")).forEach(add);
+  allNames().forEach(add);S.meetings.forEach(m=>meetPeople(m).forEach(add));extra.forEach(add);
+  return [...seen.values()];
+}
 function meetForm(m={}){
-  form({title:m.id?"Modifica resoconto":"Resoconto della riunione",wide:true,fields:[
-    {k:"title",label:"Titolo",value:m.title||"Riunione della Pro Loco",req:1},
-    [{k:"date",label:"Data della riunione",type:"date",value:m.date||todayRome(),req:1},{k:"place",label:"Dove",value:m.place,ph:"Es. Sede della Pro Loco"}],
-    {k:"present",label:"Presenti",type:"textarea",value:m.present,ph:"Nomi separati da virgola",list:"dl-names"},
-    {k:"talk",label:"Di cosa si è parlato",type:"textarea",value:m.talk,req:1,ph:"Gli argomenti della riunione, uno per riga"},
-    {k:"decided",label:"Cosa si è deciso",type:"textarea",value:m.decided,ph:"Le decisioni prese, una per riga"},
-    {k:"todo",label:"Cosa c'è da fare",type:"textarea",value:m.todo,ph:"Es. Mario: prenotare i gazebo entro venerdì"},
-    [{k:"next",label:"Prossima riunione",type:"date",value:m.next||""},{k:"nextNote",label:"Ora e luogo",value:m.nextNote,ph:"Es. ore 21, in sede"}],
-    ...(m.id?[]:[{k:"notify",label:"Avvisa i volontari (compare tra gli Avvisi con il pallino rosso)",type:"checkbox",value:true}])],
-   onSave:async o=>{const notify=o.notify;delete o.notify;
-     if(m.id){await act(()=>store.upd("meetings",m.id,o),"Resoconto aggiornato");return}
-     const id=await act(()=>store.add("meetings",{...o,by:ME.id||"",at:nowISO()}),"Resoconto pubblicato");MF.open=id;
-     if(notify){const n={title:`Resoconto: ${o.title}`,text:`Com'è andata la riunione del ${fShort(o.date)}.`+(o.decided?`\n\nDecisioni:\n${o.decided}`:"")+`\n\nIl resoconto completo è nella pagina Riunioni.`,pinned:false,archived:false,by:ME.id||"",at:nowISO()};
-       try{await store.add("notices",n)}catch(_){}}
-     setTimeout(()=>meetShare({...o,id}),350)},
-   onDelete:m.id?async()=>act(()=>store.del("meetings",m.id),"Resoconto eliminato"):null});
+  const sel=new Set(meetPeople(m));let names=meetNameOptions([...sel]);
+  const chips=()=>names.map(n=>`<button type="button" class="pick ${sel.has(n)?"on":""}" data-pick="${h(n)}" aria-pressed="${sel.has(n)}"><i>${sel.has(n)?"✓":h(initials(n))}</i>${h(n)}</button>`).join("");
+  const ta=(k,lab,hint,ph,v)=>`<label class="fld"><span>${lab}</span><textarea id="mf_${k}" rows="4" placeholder="${h(ph)}">${h(v||"")}</textarea><span class="hint">${hint}</span></label>`;
+  const md=modal(m.id?"Modifica resoconto":"Resoconto della riunione",`<form id="mtform" class="mtform" novalidate>
+    <fieldset><legend><span>1</span>La riunione</legend>
+      <label class="fld"><span>Titolo *</span><input id="mf_title" value="${h(m.title||"Riunione della Pro Loco")}" maxlength="80"></label>
+      <div class="frow"><label class="fld"><span>Data *</span><input id="mf_date" type="date" value="${h(m.date||todayRome())}"></label><label class="fld"><span>Dove</span><input id="mf_place" value="${h(m.place||"")}" placeholder="Es. Sede della Pro Loco"></label></div></fieldset>
+    <fieldset><legend><span>2</span>Chi c'era <b class="pcount" id="mf_cnt"></b></legend>
+      <p class="hint" style="margin:0 0 8px">Tocca i nomi delle persone presenti. Chi non usa l'app scrivilo qui sotto.</p>
+      <div class="picks" id="mf_picks">${chips()}</div>
+      <div class="addname"><input id="mf_new" placeholder="Altro nome…" maxlength="60" autocomplete="off"><button type="button" class="btn" id="mf_add">${ic("plus")}Aggiungi</button></div>
+      <div class="row" style="margin-top:6px;gap:6px"><button type="button" class="btn sm ghost" id="mf_all">Seleziona tutti</button><button type="button" class="btn sm ghost" id="mf_none">Nessuno</button></div></fieldset>
+    <fieldset><legend><span>3</span>Com'è andata</legend>
+      ${ta("talk","💬 Di cosa si è parlato *","Un argomento per riga.","Es. Organizzazione della Castagnata\nTurni dei volontari",m.talk)}
+      ${ta("decided","✅ Cosa si è deciso","Una decisione per riga.","Es. Si comprano 2 gazebo nuovi",m.decided)}
+      ${ta("todo","📋 Cosa c'è da fare","Chi fa cosa, una cosa per riga.","Es. Mario: chiedere il preventivo dei gazebo",m.todo)}</fieldset>
+    <fieldset><legend><span>4</span>Prossima riunione <small>(se c'è)</small></legend>
+      <div class="frow"><label class="fld"><span>Data</span><input id="mf_next" type="date" value="${h(m.next||"")}"></label><label class="fld"><span>Ora e luogo</span><input id="mf_nnote" value="${h(m.nextNote||"")}" placeholder="Es. ore 21, in sede"></label></div></fieldset>
+    ${m.id?"":`<label class="mtnotify"><input type="checkbox" id="mf_notify" checked><span><b>Avvisa i volontari</b><br><span class="small muted">Compare tra gli Avvisi con il pallino rosso.</span></span></label>`}
+    </form><p class="small" id="mf_err" style="color:var(--bad)" role="alert" hidden></p>`,
+    `${m.id?`<button class="btn danger left" type="button" id="mf_del">Elimina</button>`:""}<button class="btn" data-close type="button">Annulla</button><button class="btn pri" type="button" id="mf_save">${m.id?"Salva":"Pubblica"}</button>`,true);
+  const el=md.el,pk=$("#mf_picks",el),cnt=()=>{$("#mf_cnt",el).textContent=sel.size?`· ${sel.size}`:""};
+  const redraw=()=>{pk.innerHTML=chips();cnt()};cnt();
+  pk.addEventListener("click",e=>{const b=e.target.closest("[data-pick]");if(!b)return;const n=b.dataset.pick;sel.has(n)?sel.delete(n):sel.add(n);
+    b.classList.toggle("on",sel.has(n));b.setAttribute("aria-pressed",sel.has(n));b.querySelector("i").textContent=sel.has(n)?"✓":initials(n);cnt()});
+  const addName=()=>{const i=$("#mf_new",el);const n=i.value.trim().replace(/\s+/g," ");if(!n)return;const ex=names.find(x=>x.toLowerCase()===n.toLowerCase());
+    if(ex)sel.add(ex);else{names=[...names,n];sel.add(n)}i.value="";redraw();i.focus()};
+  $("#mf_add",el).onclick=addName;$("#mf_new",el).addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();addName()}});
+  $("#mf_all",el).onclick=()=>{names.forEach(n=>sel.add(n));redraw()};$("#mf_none",el).onclick=()=>{sel.clear();redraw()};
+  const err=t=>{const x=$("#mf_err",el);x.hidden=!t;x.textContent=t||""};
+  $("#mf_save",el).onclick=async()=>{
+    const v=k=>($("#mf_"+k,el)||{}).value||"";const o={title:v("title").trim().slice(0,80),date:v("date"),place:v("place").trim().slice(0,80),
+      people:[...sel].filter(n=>names.includes(n)||true).sort((a,b)=>a.localeCompare(b,"it")),talk:v("talk").trim(),decided:v("decided").trim(),todo:v("todo").trim(),next:v("next"),nextNote:v("nnote").trim().slice(0,80)};
+    o.present=o.people.join(", ");
+    if(!o.title)return err("Scrivi il titolo.");if(!o.date)return err("Scegli la data della riunione.");if(!o.talk)return err("Scrivi di cosa si è parlato.");
+    const b=$("#mf_save",el);b.disabled=true;b.innerHTML='<span class="spin"></span> Salvataggio';err("");
+    try{
+      if(m.id){await store.upd("meetings",m.id,o);md.close();toast("Resoconto aggiornato");return}
+      const notify=$("#mf_notify",el)&&$("#mf_notify",el).checked;
+      const id=await store.add("meetings",{...o,by:ME.id||"",at:nowISO()});MF.open=id;md.close();toast("Resoconto pubblicato");
+      if(notify){const dec=meetLines(o.decided);try{await store.add("notices",{title:`Resoconto: ${o.title}`,text:`Com'è andata la riunione del ${fShort(o.date)}.`+(dec.length?`\n\nDecisioni:\n${dec.map(x=>"• "+x).join("\n")}`:"")+`\n\nIl resoconto completo è nella pagina Riunioni.`,pinned:false,archived:false,by:ME.id||"",at:nowISO()})}catch(_){}}
+      setTimeout(()=>meetShare({...o,id}),350);
+    }catch(e){console.error(e);b.disabled=false;b.textContent=m.id?"Salva":"Pubblica";err(errMsg(e))}};
+  const d=$("#mf_del",el);if(d)d.onclick=()=>{if(!d.classList.contains("on")){d.classList.add("on");d.textContent="Conferma eliminazione";return}
+    act(()=>store.del("meetings",m.id),"Resoconto eliminato").then(()=>md.close(),()=>{})};
 }
 function meetShare(m){
   const t=meetWaText(m);
@@ -1913,7 +1994,7 @@ function meetShare(m){
   $("#mtcopy",md.el).onclick=()=>copyText(t);
 }
 document.addEventListener("click",e=>{
-  const o=e.target.closest("[data-mtopen]");if(o){MF.open=MF.open===o.dataset.mtopen&&o.getAttribute("aria-expanded")==="true"?"__none":o.dataset.mtopen;render();return}
+  const o=e.target.closest("[data-mtopen]");if(o){const id=o.dataset.mtopen;MF.open=o.getAttribute("aria-expanded")==="true"?"":id;render(true);return}
   const w=e.target.closest("[data-mtwa]");if(w){const m=S.meetings.find(x=>x.id===w.dataset.mtwa);if(m)meetShare(m);return}
   const ed=e.target.closest("[data-mtedit]");if(ed){const m=S.meetings.find(x=>x.id===ed.dataset.mtedit);if(m&&isOrg())meetForm(m);return}
 });
