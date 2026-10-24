@@ -8,7 +8,10 @@
 <meta name="description" content="App della Pro Loco Smerillo per volontari, magazzino e feste.">
 <meta name="theme-color" content="#2e5a39">
 <link rel="icon" href="icon.jpg">
-<link rel="apple-touch-icon" href="icon.jpg">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pro Loco">
 <script>window.PL_SUPA={"url": "https://pqtnbvmrgvnqlddtzwzx.supabase.co", "key": "sb_publishable_L_sUNdBPPg-Pzsx4d_xlRw_Jk0vLsze"}</script>
 <title>Pro Loco Smerillo</title>
@@ -347,6 +350,7 @@ select.inl{border:1px solid var(--line);border-radius:6px;background:var(--surfa
 .addname{display:flex;gap:8px;margin-top:10px}.addname button{flex:none}.addname input{flex:1;min-width:0;width:auto;border:1.5px solid var(--line);border-radius:8px;background:var(--bg);padding:9px 10px;font-size:16px;min-height:48px}
 .mtnotify{display:flex;gap:12px;align-items:flex-start;background:var(--surface-2);border-radius:12px;padding:12px 14px;cursor:pointer}.mtnotify input{width:22px;height:22px;margin-top:2px;accent-color:var(--green)}
 .delbtn{flex:none}.mrow{flex-wrap:wrap;row-gap:8px}.mrow>.grow{min-width:180px}.mctl{display:flex;gap:8px;align-items:center}
+.card.installtip{display:flex;gap:12px;align-items:flex-start;border:1.5px solid var(--gold);background:var(--gold-soft)}.installtip img{border-radius:12px;flex:none}
 .spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--gold);animation:sp 0.8s linear infinite;display:inline-block}
 @keyframes sp{to{transform:rotate(360deg)}}
 .comments{display:flex;flex-direction:column;gap:8px}
@@ -1789,6 +1793,21 @@ function peopleView(){
 }
 
 /* ---------- home: pannello di gestione ---------- */
+/* aggiungi alla schermata Home: così l'app resta collegata e non chiede più i dati */
+function isStandalone(){try{return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}catch(_){return false}}
+function installTip(){
+  if(ME.mode!=="supa"||isStandalone())return "";
+  try{if(localStorage.getItem("pl-tip-home")==="no")return ""}catch(_){}
+  const ua=navigator.userAgent||"";const ios=/iPhone|iPad|iPod/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);const inApp=/FBAN|FBAV|Instagram|WhatsApp|Line\//i.test(ua);
+  const how=inApp?"Hai aperto il link dentro WhatsApp: tocca i tre puntini (o l'icona del browser) e scegli <b>Apri nel browser</b>, poi segui il passo qui sotto."
+    :ios?"In Safari tocca il pulsante <b>Condividi</b> (il quadrato con la freccia in su) e poi <b>Aggiungi alla schermata Home</b>."
+    :"Nel menu del browser (i tre puntini in alto a destra) tocca <b>Installa app</b> oppure <b>Aggiungi a schermata Home</b>.";
+  return `<div class="card installtip"><img src="icon.jpg" alt="" width="48" height="48"><div class="grow"><b>Metti l'app sulla schermata Home</b><p class="small" style="margin:4px 0 0">${how} Così la apri con un tocco e resti sempre collegato, senza rimettere email e password.</p>
+    ${PWA.evt?`<button class="btn sm pri" data-act="pwaInstall" style="margin-top:8px">Installa adesso</button>`:""}</div><button class="btn sm ghost" data-act="tipHomeNo" aria-label="Chiudi">${ic("x")}</button></div>`;
+}
+const PWA={evt:null};
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();PWA.evt=e;schedule()});
+window.addEventListener("appinstalled",()=>{PWA.evt=null;try{localStorage.setItem("pl-tip-home","no")}catch(_){}schedule()});
 PAGES.home=()=>{
   const up=upcoming();const ce=castEvent();
   const tasks=S.tasks.filter(t=>!t.done).sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999")).slice(0,5);
@@ -1803,6 +1822,7 @@ PAGES.home=()=>{
 
     <div class="row">${canWrite()?`<button class="btn" data-act="newAvail">${ic("people")}La mia disponibilità</button><button class="btn alt" data-act="newTask">${ic("plus")}Attività</button>`:""}${isOrg()?`<button class="btn alt" data-act="newItem">${ic("box")}Articolo</button>`:""}</div></div>
   </section>
+  ${installTip()}
   <div class="quick">
     <button class="qt" data-go="vol"><span class="qi c3">${ic("people")}</span><b>Volontari</b><span>${vols} ${vols===1?"persona":"persone"}${unc.length?` · ${unc.length} ${unc.length===1?"turno scoperto":"turni scoperti"}`:""}</span></button>
     <button class="qt" data-go="mag"><span class="qi c1">${ic("box")}</span><b>Magazzino</b><span>${S.inventory.length} ${S.inventory.length===1?"articolo":"articoli"}${prep.length?` · ${prep.length} da preparare`:""}</span></button>
@@ -2446,6 +2466,8 @@ document.addEventListener("click",async e=>{
     case "newItem":itemForm();break;
     case "scanMag":scanMag();break;
     case "newMeet":if(isOrg())meetForm();break;
+    case "tipHomeNo":try{localStorage.setItem("pl-tip-home","no")}catch(_){}render();break;
+    case "pwaInstall":if(PWA.evt){PWA.evt.prompt();PWA.evt.userChoice.finally(()=>{PWA.evt=null;schedule()})}break;
     case "newInvite":if(ME.mode==="supa"&&isEditor())inviteForm();break;
     case "newEdition":confirmBox(`Preparare la ${castAuto().ed}ª Castagnata? La ${(+((S.settings.find(x=>x.id==="castagnata")||{}).edition)||CAST_BASE.ed)}ª va in Archivio con turni, attività completate, consegne e una copia della pianta. Stand, magazzino e foto restano.`,"Prepara la nuova edizione",async()=>{await act(()=>startNewEdition(),"Nuova edizione pronta");render(true)});break;
     case "standPhotos":{const ov=t.closest(".ov");if(ov)ov.remove();standPhotosModal(d.name,d.color,d.n);break}
@@ -2717,6 +2739,7 @@ document.addEventListener("submit",async e=>{
       if(!okEmail(email))return fail("Scrivi la tua email per intero (es. nome@gmail.com).");
       if(!password)return fail("Scrivi la password.");
       const {data,error}=await A.signInWithPassword({email,password});if(error)return fail(sbMsg(error));
+      try{localStorage.setItem("pl-email",email)}catch(_){}
       await sbAfterSignIn(data.user,"login");return}
     if(f.id==="sbReg"){
       const name=$("#sr_n").value.trim().replace(/\s+/g," "),email=$("#sr_e").value.trim().toLowerCase(),p1=$("#sr_p").value,p2=$("#sr_p2").value;AUTH.mail=email;
@@ -2724,7 +2747,7 @@ document.addEventListener("submit",async e=>{
       if(!okEmail(email))return fail("Questa email non sembra corretta.");
       if(p1.length<8)return fail("La password deve avere almeno 8 caratteri.");
       if(p1!==p2)return fail("Le due password non coincidono.");
-      const invite=normCode($("#sr_c").value);AUTH.invite=invite;
+      const invite=normCode($("#sr_c").value);AUTH.invite=invite;try{localStorage.setItem("pl-email",email)}catch(_){}
       const {data,error}=await A.signUp({email,password:p1,options:{data:invite?{name,invite}:{name},emailRedirectTo:here}});
       if(error)return fail(sbMsg(error));
       if(data.user&&Array.isArray(data.user.identities)&&!data.user.identities.length)return fail("Esiste già un account con questa email: accedi.");
@@ -2763,6 +2786,7 @@ async function sbInit(){
    else{try{AUTH.invite=sessionStorage.getItem("pl-invite")||""}catch(_){}}}
   let session=null;try{({data:{session}}=await SB.client.auth.getSession())}catch(e){AUTH.state="error";render(true);return}
   if(SB.recovery&&session){AUTH.state="newpw";render(true);return}
+  if(!AUTH.mail){try{AUTH.mail=localStorage.getItem("pl-email")||""}catch(_){}}
   if(!session){AUTH.state=AUTH.invite?"register":"login";render(true);return}
   if(/access_token|type=signup/.test(location.hash)){try{history.replaceState(null,"",location.pathname)}catch(_){}}
   await sbAfterSignIn(session.user,/type=signup/.test(location.hash)?"new":false);
