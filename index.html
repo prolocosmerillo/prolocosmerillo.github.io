@@ -363,6 +363,13 @@ select.inl{border:1px solid var(--line);border-radius:6px;background:var(--surfa
 @keyframes splIn{from{opacity:0;transform:translate3d(0,10px,0)}to{opacity:1;transform:none}}
 @keyframes splRun{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
 @media (prefers-reduced-motion:reduce){.splash img,.splash b,.splbar,.splbar::after{animation:none}}
+.scanpick{display:flex;flex-direction:column;gap:10px;margin:12px 0}.scanpick .btn{justify-content:center;cursor:pointer}
+.scanpic{position:relative}.scmore{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.65);color:#fff;font-size:.82rem;padding:4px 8px;border-radius:6px}
+.folders{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.folder{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:12px 14px;border:1.5px solid var(--line);border-radius:14px;background:var(--surface);cursor:pointer;font:inherit;color:var(--ink);min-height:84px}
+.folder .fic{font-size:1.5rem;line-height:1}.folder .fname{font-weight:700;margin-top:4px}.folder .fmeta{font-size:.82rem;color:var(--muted)}
+.folder.on{border-color:var(--green);background:var(--green-soft)}.folder.add{border-style:dashed;color:var(--muted)}
+.folderhead{display:flex;align-items:center;gap:10px;margin:0 0 10px}.folderhead h2{margin:0;font-size:1.2rem}.folderhead .sp{flex:1}
 .spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--gold);animation:sp 0.8s linear infinite;display:inline-block}
 @keyframes sp{to{transform:rotate(360deg)}}
 .comments{display:flex;flex-direction:column;gap:8px}
@@ -1571,7 +1578,7 @@ const allocBy=(id,st)=>S.alloc.filter(a=>a.itemId===id&&a.status===st).reduce((n
 const itemInMag=it=>Math.max(0,(+it.qty||0)-allocBy(it.id,"out"));
 function itemWhere(it){const ev={};S.alloc.filter(a=>a.itemId===it.id&&a.status==="out").forEach(a=>{const e=S.events.find(x=>x.id===a.eventId);const k=e?e.title:"un evento";ev[k]=(ev[k]||0)+(+a.qty||0)});return Object.entries(ev)}
 const itemFree=it=>(it.cond==="ko"?0:(+it.qty||0))-allocOut(it.id);
-const MAGF={q:"",cat:"all",tab:"inv",ev:null};
+const MAGF={q:"",cat:"all",tab:"inv",ev:null,place:"all"};
 PAGES.mag=()=>{
   const items=S.inventory;const tab=R.tab||MAGF.tab;
   const pieces=items.reduce((n,i)=>n+(+i.qty||0),0);
@@ -1583,19 +1590,54 @@ PAGES.mag=()=>{
   <div class="tabs" role="tablist">${[["inv","Inventario"],["dove","Dove va cosa"]].map(t=>`<button role="tab" aria-selected="${tab===t[0]}" data-mtab="${t[0]}">${t[1]}</button>`).join("")}</div>
   ${tab==="inv"?invView():doveView(null)}`;
 };
+/* luoghi del magazzino (cartelle): dai luoghi scritti negli articoli + quelli creati vuoti */
+const NOPLACE="__none";
+function magPlaces(){const st=S.settings.find(x=>x.id==="magazzino")||{};const set=new Map();
+  (st.places||[]).forEach(p=>{p=String(p||"").trim();if(p)set.set(p.toLowerCase(),p)});
+  S.inventory.forEach(i=>{const p=String(i.place||"").trim();if(p&&!set.has(p.toLowerCase()))set.set(p.toLowerCase(),p)});
+  return [...set.values()].sort((a,b)=>a.localeCompare(b,"it"))}
+const placeOf=i=>String(i.place||"").trim();
+function placeFolders(){
+  const P=magPlaces();const all=S.inventory;const none=all.filter(i=>!placeOf(i));
+  const card=(key,name,arr,icon)=>{const on=MAGF.place===key;const pz=arr.reduce((n,i)=>n+(+i.qty||0),0);
+    return `<button class="folder ${on?"on":""}" data-magplace="${h(key)}" aria-pressed="${on}"><span class="fic" aria-hidden="true">${icon}</span><span class="fname">${h(name)}</span><span class="fmeta">${arr.length} ${arr.length===1?"articolo":"articoli"}${pz?` · ${pz} pz`:""}</span></button>`};
+  return `<div class="folders">${card("all","Tutti i luoghi",all,"🏠")}${P.map(p=>card(p,p,all.filter(i=>placeOf(i).toLowerCase()===p.toLowerCase()),"📁")).join("")}${none.length?card(NOPLACE,"Senza luogo",none,"📂"):""}
+    ${isOrg()?`<button class="folder add" data-act="newPlace"><span class="fic" aria-hidden="true">＋</span><span class="fname">Nuovo luogo</span><span class="fmeta">es. Cantina, Sede</span></button>`:""}</div>`;
+}
 function invView(){
   let items=[...S.inventory];
+  if(MAGF.place!=="all"&&MAGF.place!==NOPLACE&&!magPlaces().some(p=>p===MAGF.place))MAGF.place="all";
+  if(MAGF.place===NOPLACE)items=items.filter(i=>!placeOf(i));else if(MAGF.place!=="all")items=items.filter(i=>placeOf(i).toLowerCase()===MAGF.place.toLowerCase());
+  const inPlace=items.slice();
   if(MAGF.cat!=="all")items=items.filter(i=>(i.cat||"Altro")===MAGF.cat);
-  if(MAGF.q){const q=MAGF.q.toLowerCase();items=items.filter(i=>(i.name+" "+(i.loc||"")+" "+(i.notes||"")).toLowerCase().includes(q))}
-  const cats=MAT_CATS.filter(c=>S.inventory.some(i=>(i.cat||"Altro")===c));
+  if(MAGF.q){const q=MAGF.q.toLowerCase();items=items.filter(i=>(i.name+" "+(i.loc||"")+" "+(i.place||"")+" "+(i.notes||"")).toLowerCase().includes(q))}
+  const cats=MAT_CATS.filter(c=>inPlace.some(i=>(i.cat||"Altro")===c));
   const groups=MAT_CATS.map(c=>[c,items.filter(i=>(i.cat||"Altro")===c).sort((a,b)=>a.name.localeCompare(b.name,"it"))]).filter(g=>g[1].length);
-  return `<div class="row"><input class="inp" style="max-width:280px" id="magq" placeholder="Cerca articolo o posizione" value="${h(MAGF.q)}" aria-label="Cerca nel magazzino"><div class="chips"><button class="chip" data-magcat="all" aria-pressed="${MAGF.cat==="all"}">Tutto</button>${cats.map(c=>`<button class="chip" data-magcat="${h(c)}" aria-pressed="${MAGF.cat===c}">${h(c)}</button>`).join("")}</div></div>
+  const sel=MAGF.place!=="all"&&MAGF.place!==NOPLACE?MAGF.place:"";
+  return `${placeFolders()}
+  ${sel?`<div class="folderhead"><h2>📁 ${h(sel)}</h2><span class="small muted">${inPlace.length} ${inPlace.length===1?"articolo":"articoli"}</span><span class="sp"></span>${isOrg()?`<button class="btn sm ghost" data-act="renamePlace">Rinomina</button>`:""}</div>`:""}
+  <div class="row"><input class="inp" style="max-width:280px" id="magq" placeholder="Cerca articolo o posizione" value="${h(MAGF.q)}" aria-label="Cerca nel magazzino"><div class="chips"><button class="chip" data-magcat="all" aria-pressed="${MAGF.cat==="all"}">Tutto</button>${cats.map(c=>`<button class="chip" data-magcat="${h(c)}" aria-pressed="${MAGF.cat===c}">${h(c)}</button>`).join("")}</div></div>
   ${groups.length?groups.map(([c,arr])=>`<div class="card"><div class="ch"><h2><span class="hico">${ic("box")}</span>${h(c)}</h2><span class="small muted num">${arr.reduce((n,i)=>n+(+i.qty||0),0)} pezzi</span></div><div class="list">${arr.map(itemRow).join("")}</div></div>`).join("")
-   :emptyBox(S.inventory.length?"Nessun risultato":"Magazzino vuoto",S.inventory.length?"Prova a cambiare ricerca o categoria.":"Inserisci gazebo, tavoli, panche, prolunghe, pentoloni e tutto quello che la Pro Loco tiene in magazzino.",isOrg()&&!S.inventory.length?`<button class="btn pri" data-act="newItem">${ic("plus")}Primo articolo</button>`:"")}`;
+   :emptyBox(S.inventory.length?(sel&&!inPlace.length?"Cartella vuota":"Nessun risultato"):"Magazzino vuoto",S.inventory.length?(sel&&!inPlace.length?`Aggiungi un articolo: verrà messo in “${sel}”.`:"Prova a cambiare ricerca o categoria."):"Inserisci gazebo, tavoli, panche, prolunghe, pentoloni e tutto quello che la Pro Loco tiene in magazzino.",isOrg()&&(!S.inventory.length||(sel&&!inPlace.length))?`<button class="btn pri" data-act="newItem">${ic("plus")}${S.inventory.length?"Aggiungi articolo":"Primo articolo"}</button>`:"")}`;
+}
+function placeForm(){
+  form({title:"Nuovo luogo",saveLabel:"Crea",fields:[{k:"name",label:"Nome del luogo",req:1,ph:"Es. Conta, Cantina, Sede, Garage"}],
+   onSave:async o=>{const n=String(o.name||"").trim().replace(/\s+/g," ").slice(0,40);if(!n)throw{userMsg:"Scrivi il nome del luogo."};
+     const st=S.settings.find(x=>x.id==="magazzino")||{};const cur=(st.places||[]).filter(Boolean);
+     if(!magPlaces().some(p=>p.toLowerCase()===n.toLowerCase())){const {id:_i,...rest}=st;await act(()=>store.set("settings","magazzino",{...rest,places:[...cur,n]}),"Luogo creato")}
+     MAGF.place=magPlaces().find(p=>p.toLowerCase()===n.toLowerCase())||n;MAGF.cat="all";render(true)}});
+}
+function renamePlaceForm(){
+  const old=MAGF.place;if(!old||old==="all"||old===NOPLACE)return;
+  form({title:"Rinomina luogo",fields:[{k:"name",label:"Nuovo nome",value:old,req:1}],
+   onSave:async o=>{const n=String(o.name||"").trim().replace(/\s+/g," ").slice(0,40);if(!n||n===old)return;
+     for(const i of S.inventory.filter(i=>placeOf(i).toLowerCase()===old.toLowerCase()))await store.upd("inventory",i.id,{place:n});
+     const st=S.settings.find(x=>x.id==="magazzino");if(st&&(st.places||[]).length){const {id:_i,...rest}=st;await store.set("settings","magazzino",{...rest,places:(st.places||[]).map(p=>p.toLowerCase()===old.toLowerCase()?n:p)})}
+     MAGF.place=n;toast("Luogo rinominato");render(true)}});
 }
 function itemRow(i){const tot=+i.qty||0;const inMag=itemInMag(i);const out=allocBy(i.id,"out");const res=allocBy(i.id,"prep");const free=itemFree(i);
   const pct=tot?Math.max(0,Math.min(100,inMag/tot*100)):0;const where=itemWhere(i);
-  return `<div class="li clk" data-item="${h(i.id)}">${i.photo?`<img class="ithumb" src="${assetUrl(i.photo)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`:""}<div class="grow"><div class="row" style="gap:6px"><span class="t">${h(i.name)}</span>${i.cond&&i.cond!=="ok"?pill(condS(i.cond)):""}</div><div class="small muted">${h([i.loc&&"📍 "+i.loc,i.owner&&"Resp. "+i.owner].filter(Boolean).join(" · ")||"Posizione non indicata")}</div>
+  return `<div class="li clk" data-item="${h(i.id)}">${i.photo?`<img class="ithumb" src="${assetUrl(i.photo)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`:""}<div class="grow"><div class="row" style="gap:6px"><span class="t">${h(i.name)}</span>${i.cond&&i.cond!=="ok"?pill(condS(i.cond)):""}</div><div class="small muted">${h([MAGF.place==="all"&&placeOf(i)&&"📁 "+placeOf(i),i.loc&&"📍 "+i.loc,i.owner&&"Resp. "+i.owner].filter(Boolean).join(" · ")||"Posizione non indicata")}</div>
     ${out?`<div class="instat out">🚚 <b class="num">${out}</b> in uso${where.length===1?` alla ${h(where[0][0])}`:where.length>1?` in ${where.length} feste`:""}</div>`:""}${res?`<div class="instat res">📌 <b class="num">${res}</b> prenotat${res===1?"o":"i"} per una festa</div>`:""}</div>
    <div class="qty"><span class="qn"><b class="num ${free<0?"neg":""}">${inMag}</b> <span class="num">di ${tot}</span></span><span class="minibar"><i style="width:${pct}%"></i></span><span class="small muted">in magazzino${i.unit?" ("+h(i.unit)+")":""}</span></div></div>`}
 function doveView(eventId){
@@ -1615,14 +1657,14 @@ function itemForm(i={}){
     {k:"name",label:"Articolo",value:i.name,req:1,ph:"Es. Gazebo 3×3"},
     [{k:"qty",label:"Quantità",type:"number",value:i.qty??1},{k:"unit",label:"Unità",value:i.unit,ph:"pezzi, metri…"}],
     [{k:"cat",label:"Categoria",type:"select",opts:MAT_CATS,value:i.cat||MAT_CATS[0]},{k:"cond",label:"Stato",type:"select",opts:COND.map(c=>[c[0],c[1]]),value:i.cond||"ok"}],
-    {k:"loc",label:"Dove si trova",value:i.loc,ph:"Es. Magazzino comunale, scaffale B"},
+    [{k:"place",label:"Luogo",value:i.id?(i.place||""):(MAGF.place!=="all"&&MAGF.place!==NOPLACE?MAGF.place:(i.place||"")),list:"dl-places",ph:"Es. Conta"},{k:"loc",label:"Posizione",value:i.loc,ph:"Es. Scaffale blu, 2° ripiano"}],
     {k:"owner",label:"Responsabile",value:i.owner,list:"dl-names"},
     {k:"notes",label:"Note",type:"textarea",value:i.notes,ph:"Prestato da, istruzioni di montaggio…"}],
-   extra:ME.assets?`<div class="fld"><span>Foto di dove si trova</span>
+   extra:`<datalist id="dl-places">${magPlaces().map(p=>`<option value="${h(p)}">`).join("")}</datalist>`+(ME.assets?`<div class="fld"><span>Foto di dove si trova</span>
      ${i.photo?`<div class="iphprev"><img src="${assetUrl(i.photo)}" alt="Foto attuale dell'articolo" onerror="this.style.visibility='hidden'"><label class="checks"><label><input type="checkbox" id="iph_rm"> Togli la foto</label></label></div>`:""}
      <label class="btn iphbtn">📷 ${i.photo?"Cambia foto":"Aggiungi foto"}<input type="file" id="iph_f" accept="image/*" hidden></label>
      <span class="hint" id="iph_n">Fotografa lo scaffale o l'angolo del magazzino dove sta l'articolo.</span></div>`
-     :`<p class="small muted">Le foto degli articoli si possono aggiungere solo con i permessi da organizzatore.</p>`,
+     :`<p class="small muted">Le foto degli articoli si possono aggiungere solo con i permessi da organizzatore.</p>`),
    onSave:async(o,mm)=>{
      const f=$("#iph_f",mm.el),rm=$("#iph_rm",mm.el);const old=i.photo||"";let drop="";
      if(f&&f.files&&f.files[0]){let r,ratio;try{const x=await resizeImage(f.files[0]);ratio=x.ratio;r=await ME.assets.upload(x.blob,{type:"image/jpeg"})}catch(e){const c=e&&e.code;throw{userMsg:c==="too_large"?"Foto troppo grande.":c==="quota_or_state"?"Spazio per le foto esaurito.":c==="unsupported_type"?"Formato non supportato: usa JPG o PNG.":"Caricamento della foto non riuscito, riprova."}}
@@ -1672,22 +1714,58 @@ function mlMatch(keys){
   return null;
 }
 function scanMag(){
-  const inp=document.createElement("input");inp.type="file";inp.accept="image/*";inp.setAttribute("capture","environment");
-  inp.style.display="none";document.body.appendChild(inp);
-  inp.onchange=()=>{const f=inp.files&&inp.files[0];inp.remove();if(f)scanRun(f)};
-  inp.click();setTimeout(()=>{if(inp.isConnected&&!inp.files.length)inp.remove()},120000);
-  mlLoad().catch(()=>{}); /* intanto prepara il riconoscimento */
+  if(ME.mode!=="supa")mlLoad().catch(()=>{}); /* intanto prepara il riconoscimento sul telefono */
+  const m=modal("Fotografa il magazzino",`<p class="small muted" style="margin:0">Scatta una foto adesso oppure scegline fino a 5 dalla galleria: l'app somma tutto quello che trova.</p>
+    <div class="scanpick"><label class="btn pri big">📷 Scatta una foto<input type="file" accept="image/*" capture="environment" hidden data-scfile></label>
+    <label class="btn big">🖼 Scegli dalla galleria<input type="file" accept="image/*" multiple hidden data-scfile></label></div>
+    <p class="small muted" style="margin:0">Consiglio: uno scaffale per foto, da vicino e con la luce accesa. Non fotografare due volte la stessa cosa, altrimenti viene contata due volte.</p>`,`<button class="btn" data-close>Annulla</button>`);
+  $$("[data-scfile]",m.el).forEach(inp=>inp.onchange=()=>{const fs=[...(inp.files||[])].filter(f=>/^image\//.test(f.type)||!f.type);if(!fs.length)return;
+    if(fs.length>5)toast("Uso le prime 5 foto");m.close();scanRun(fs.slice(0,5))});
 }
-async function scanRun(file){
-  let blob;try{blob=(await resizeImage(file)).blob}catch(e){toast("Non riesco ad aprire questa foto",true);return}
+const SCAN_MSG={limite_giornaliero:"Hai già fatto 40 foto oggi: riprova domani.",google_occupato:"Il servizio di Google è occupato: riprova tra un minuto.",solo_moderatori:"Solo i moderatori possono usare questa funzione.",non_autenticato:"Esci e rientra nell'app, poi riprova.",foto_non_valida:"Questa foto non va bene: prova con un'altra."};
+function blobB64(b){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]||"");r.onerror=rej;r.readAsDataURL(b)})}
+async function cloudScan(blob){
+  try{const image=await blobB64(blob);
+    const {data,error}=await SB.client.functions.invoke("scan-warehouse",{body:{image,inventory:S.inventory.map(i=>i.name)}});
+    if(error){let code="";try{code=(await error.context.json()).error}catch(_){}return {ok:false,code}}
+    return {ok:true,items:Array.isArray(data&&data.items)?data.items:[]}}
+  catch(e){console.error(e);return {ok:false,code:""}}
+}
+function scanMatch(it){
+  const inv=S.inventory;const n1=normName(it.match),n2=normName(it.name);
+  let ex=inv.find(i=>normName(i.name)===n1&&n1)||inv.find(i=>normName(i.name)===n2);if(ex)return ex;
+  const part=inv.filter(i=>{const n=normName(i.name);return n.length>3&&(n.includes(n2)||n2.includes(n))});
+  return part.length===1?part[0]:null;
+}
+async function scanRun(files){
+  files=Array.isArray(files)?files:[files];
+  const blobs=[];for(const f of files){try{blobs.push((await resizeImage(f)).blob)}catch(_){}}
+  if(!blobs.length){toast(files.length>1?"Non riesco ad aprire queste foto":"Non riesco ad aprire questa foto",true);return}
+  const blob=blobs[0];
   const url=URL.createObjectURL(blob);let alive=true;
-  const m=modal("Fotografa il magazzino",`<div class="scanpic"><canvas id="sccv" aria-label="Foto del magazzino con gli oggetti riconosciuti"></canvas></div><div id="scbody"><div class="row" style="gap:12px;align-items:center"><span class="spin" aria-hidden="true"></span><div><b id="scst">${ML.model?"Sto guardando la foto…":"Preparo il riconoscimento…"}</b><div class="small muted" id="scst2">${ML.model?"Pochi secondi.":"Solo la prima volta scarica circa 20 MB: meglio col Wi-Fi."}</div></div></div></div>`,
+  const m=modal("Fotografa il magazzino",`<div class="scanpic"><canvas id="sccv" aria-label="Foto del magazzino con gli oggetti riconosciuti"></canvas>${blobs.length>1?`<span class="scmore">${blobs.length===2?"+ 1 altra foto":`+ altre ${blobs.length-1} foto`}</span>`:""}</div><div id="scbody"><div class="row" style="gap:12px;align-items:center"><span class="spin" aria-hidden="true"></span><div><b id="scst">${ME.mode==="supa"?"Sto riconoscendo gli articoli…":ML.model?"Sto guardando la foto…":"Preparo il riconoscimento…"}</b><div class="small muted" id="scst2">${ME.mode==="supa"?"Di solito ci vogliono 5–15 secondi.":ML.model?"Pochi secondi.":"Solo la prima volta scarica circa 20 MB: meglio col Wi-Fi."}</div></div></div></div>`,
     `<button class="btn" data-close id="scx">Annulla</button><button class="btn pri" id="scok" hidden>Aggiungi al magazzino</button>`);
   new MutationObserver((_,o)=>{if(!m.el.isConnected){o.disconnect();alive=false;URL.revokeObjectURL(url)}}).observe($("#modals"),{childList:true});
   const img=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=url});
   const cv=$("#sccv",m.el);
   if(!img){$("#scbody",m.el).innerHTML=`<p><b>Non riesco ad aprire questa foto.</b></p>`;return}
   cv.width=img.naturalWidth;cv.height=img.naturalHeight;const g=cv.getContext("2d");g.drawImage(img,0,0);
+  let rows=null,skipped=0,cloud=false;
+  if(ME.mode==="supa"&&SB.client){ /* riconoscimento con Gemini, dal server */
+    const all=[];let r={ok:true,items:[]};
+    for(let k=0;k<blobs.length;k++){
+      $("#scst",m.el).textContent=blobs.length>1?`Sto riconoscendo gli articoli… foto ${k+1} di ${blobs.length}`:"Sto riconoscendo gli articoli…";$("#scst2",m.el).textContent="Di solito ci vogliono 5–15 secondi per foto.";
+      const rk=await cloudScan(blobs[k]);if(!alive)return;
+      if(!rk.ok){r=rk;break}all.push(...rk.items)}
+    if(r.ok){cloud=true;rows=[];const used=new Map();
+      for(const it of all){if(!it.sure||!(it.qty>0)){skipped++;continue}
+        const ex=scanMatch(it);const key=ex?"id:"+ex.id:"n:"+normName(it.name);
+        if(used.has(key)){used.get(key).qty+=it.qty;continue}
+        const row={name:ex?ex.name:it.name,qty:it.qty,cat:it.cat,unit:it.unit,ex};used.set(key,row);rows.push(row)}}
+    else if(r.code!=="non_configurato"){
+      $("#scbody",m.el).innerHTML=`<p><b>Il riconoscimento non è riuscito.</b></p><p class="small muted">${h(SCAN_MSG[r.code]||"Controlla la connessione e riprova tra poco.")}</p>`;$("#scx",m.el).textContent="Chiudi";return}
+  }
+  if(!rows){
   let preds;
   try{const model=await mlLoad();if(!alive)return;
     $("#scst",m.el).textContent="Sto guardando la foto…";$("#scst2",m.el).textContent="Pochi secondi.";
@@ -1697,7 +1775,7 @@ async function scanRun(file){
     $("#scbody",m.el).innerHTML=`<p><b>Il riconoscimento non è partito.</b></p><p class="small muted">${navigator.onLine===false?"Serve la connessione la prima volta: riprova quando sei online.":"Controlla la connessione e riprova. Funziona solo dentro l'app pubblicata, non nella copia scaricata."}</p>`;
     $("#scx",m.el).textContent="Chiudi";return}
   if(!alive)return;
-  const SURE=0.55;let skipped=0;const groups=new Map();const lw=Math.max(3,Math.round(cv.width/220));
+  const SURE=0.7;const groups=new Map();const lw=Math.max(3,Math.round(cv.width/220));
   g.font=`700 ${Math.max(16,Math.round(cv.width/28))}px system-ui,sans-serif`;
   for(const p of preds){
     if(ML_IGNORE.has(p.class))continue;
@@ -1709,24 +1787,25 @@ async function scanRun(file){
     const t=`${gr.def[0]}`;const tw=g.measureText(t).width+12;const th=parseInt(g.font.split(" ")[1])+8;
     g.fillStyle="#2f7a3e";g.fillRect(x,Math.max(0,y-th),tw,th);g.fillStyle="#fff";g.fillText(t,x+6,Math.max(0,y-th)+th-8);
   }
-  const rows=[...groups.values()].map(({def,n})=>{const ex=mlMatch(def[2]);return {name:ex?ex.name:def[0],qty:n,cat:def[1],ex}});
+  rows=[...groups.values()].map(({def,n})=>{const ex=mlMatch(def[2]);return {name:ex?ex.name:def[0],qty:n,cat:def[1],ex}});
   /* due oggetti diversi che corrispondono allo stesso articolo: si sommano */
   for(let i=rows.length-1;i>=0;i--){const j=rows.findIndex((r,k)=>k<i&&r.ex&&rows[i].ex&&r.ex.id===rows[i].ex.id);if(j>=0){rows[j].qty+=rows[i].qty;rows.splice(i,1)}}
+  }
   const nw=rows.filter(r=>!r.ex),old=rows.filter(r=>r.ex);
-  const rowH=(r,i)=>`<label class="li" style="gap:12px;align-items:center;cursor:pointer"><input type="checkbox" data-sc="${i}" ${r.ex?"":"checked"} style="width:24px;height:24px;flex:none;accent-color:var(--green)"><div class="grow"><div class="t">${h(r.name)}</div><div class="small muted">${r.ex?`Ora in magazzino: <b class="num">${+r.ex.qty||0}</b> · spunta per mettere la quantità della foto`:h(r.cat)}</div></div><input class="inp num" type="number" min="1" max="999" inputmode="numeric" value="${r.qty}" data-scq="${i}" aria-label="Quantità di ${h(r.name)}" style="width:76px;text-align:center"></label>`;
+  const rowH=(r,i)=>`<label class="li" style="gap:12px;align-items:center;cursor:pointer"><input type="checkbox" data-sc="${i}" ${r.ex?"":"checked"} style="width:24px;height:24px;flex:none;accent-color:var(--green)"><div class="grow"><div class="t">${h(r.name)}</div><div class="small muted">${r.ex?`Ora in magazzino: <b class="num">${+r.ex.qty||0}</b> · spunta per mettere la quantità della foto`:h(r.cat)+(r.unit&&r.unit!=="pezzi"?" · in "+h(r.unit):"")}</div></div><input class="inp num" type="number" min="1" max="9999" inputmode="numeric" value="${r.qty}" data-scq="${i}" aria-label="Quantità di ${h(r.name)}" style="width:76px;text-align:center"></label>`;
   const idx=r=>rows.indexOf(r);
   $("#scbody",m.el).innerHTML=rows.length?`
     ${nw.length?`<h3>Nuovi articoli trovati</h3><p class="small muted">Controlla i numeri. Togli la spunta a quello che non vuoi aggiungere.</p><div class="list">${nw.map(r=>rowH(r,idx(r))).join("")}</div>`:""}
     ${old.length?`<h3 style="margin-top:16px">Già in magazzino</h3><p class="small muted">Non vengono cambiati, a meno che tu non metta la spunta.</p><div class="list">${old.map(r=>rowH(r,idx(r))).join("")}</div>`:""}
-    ${nw.length?`<label class="fld" style="margin-top:16px"><span>Dove si trovano i nuovi articoli?</span><input class="inp" id="scloc" value="Magazzino" autocomplete="off"></label>`:""}
-    ${skipped?`<p class="small muted" style="margin-top:12px">${skipped===1?"1 oggetto non riconosciuto con sicurezza: non viene aggiunto.":`${skipped} oggetti non riconosciuti con sicurezza: non vengono aggiunti.`}</p>`:""}<p class="small muted" style="margin-top:8px">I riquadri verdi nella foto sono gli oggetti riconosciuti.</p>`
-   :`<p><b>Nessun articolo riconosciuto con sicurezza.</b></p><p class="small muted">Non è stato aggiunto niente. Prova con una foto più vicina e con più luce.</p><p class="small muted">Il telefono riconosce solo oggetti comuni come sedie, tavoli, panche, frigoriferi, forni, bottiglie e ciotole. Gazebo, prolunghe e cartelli vanno aggiunti a mano.</p>`;
+    ${nw.length?`<div class="frow" style="margin-top:16px"><label class="fld"><span>Luogo dei nuovi articoli</span><input class="inp" id="scplace" list="dl-places2" value="${h(MAGF.place!=="all"&&MAGF.place!==NOPLACE?MAGF.place:(magPlaces()[0]||""))}" autocomplete="off"></label><label class="fld"><span>Posizione</span><input class="inp" id="scloc" value="" placeholder="Es. Scaffale blu" autocomplete="off"></label></div><datalist id="dl-places2">${magPlaces().map(p=>`<option value="${h(p)}">`).join("")}</datalist>`:""}
+    ${skipped?`<p class="small muted" style="margin-top:12px">${skipped===1?"1 oggetto non riconosciuto con sicurezza: non viene aggiunto.":`${skipped} oggetti non riconosciuti con sicurezza: non vengono aggiunti.`}</p>`:""}${cloud?"":`<p class="small muted" style="margin-top:8px">I riquadri verdi nella foto sono gli oggetti riconosciuti.</p>`}`
+   :`<p><b>Nessun articolo riconosciuto con sicurezza.</b></p><p class="small muted">Non è stato aggiunto niente. Prova con una foto più vicina e con più luce.</p>${cloud?`<p class="small muted">Prova a fotografare uno scaffale alla volta, da vicino e con la luce accesa.</p>`:`<p class="small muted">Il telefono riconosce solo oggetti comuni come sedie, tavoli, panche, frigoriferi, forni, bottiglie e ciotole. Gazebo, prolunghe e cartelli vanno aggiunti a mano.</p>`}`;
   const ok=$("#scok",m.el);const cnt=()=>{const n=$$("[data-sc]",m.el).filter(c=>c.checked).length;ok.disabled=!n;ok.textContent=n?`Salva ${n} ${n===1?"articolo":"articoli"}`:"Niente da salvare"};
   if(rows.length){ok.hidden=false;cnt();m.el.addEventListener("change",e=>{if(e.target.matches("[data-sc]"))cnt()})}else $("#scx",m.el).textContent="Chiudi";
-  ok.onclick=async()=>{ok.disabled=true;const loc=(($("#scloc",m.el)||{}).value||"").trim().slice(0,120);let a=0,u=0;
-    try{for(const c of $$("[data-sc]",m.el)){if(!c.checked)continue;const r=rows[+c.dataset.sc];const q=Math.max(1,Math.min(999,Math.floor(+$(`[data-scq="${c.dataset.sc}"]`,m.el).value)||r.qty));
+  ok.onclick=async()=>{ok.disabled=true;const loc=(($("#scloc",m.el)||{}).value||"").trim().slice(0,120);const place=(($("#scplace",m.el)||{}).value||"").trim().slice(0,40);let a=0,u=0;
+    try{for(const c of $$("[data-sc]",m.el)){if(!c.checked)continue;const r=rows[+c.dataset.sc];const q=Math.max(1,Math.min(9999,Math.floor(+$(`[data-scq="${c.dataset.sc}"]`,m.el).value)||r.qty));
         if(r.ex){await store.upd("inventory",r.ex.id,{qty:q});u++}
-        else{await store.add("inventory",{name:r.name,qty:q,unit:"pezzi",cat:r.cat,cond:"ok",loc,owner:"",notes:"Aggiunto da una foto del magazzino",at:nowISO()});a++}}
+        else{await store.add("inventory",{name:r.name,qty:q,unit:r.unit||"pezzi",cat:r.cat,cond:"ok",place,loc,owner:"",notes:"Aggiunto da una foto del magazzino",at:nowISO()});a++}}
       m.close();toast([a&&`${a} ${a===1?"articolo aggiunto":"articoli aggiunti"}`,u&&`${u} ${u===1?"aggiornato":"aggiornati"}`].filter(Boolean).join(", ")||"Fatto")}
     catch(e){console.error(e);toast(errMsg(e),true);ok.disabled=false}};
 }
@@ -1743,7 +1822,7 @@ function itemModal(i){
    <div class="grid g3 istats"><div class="stat"><span class="k">In magazzino</span><span class="v num">${itemInMag(i)}</span><span class="small muted">di ${+i.qty||0}</span></div><div class="stat"><span class="k">In uso alle feste</span><span class="v num">${allocBy(i.id,"out")}</span></div><div class="stat"><span class="k">Liberi da assegnare</span><span class="v num">${Math.max(0,itemFree(i))}</span>${allocBy(i.id,"prep")?`<span class="small muted">${allocBy(i.id,"prep")} prenotati</span>`:""}</div></div>
    ${itemWhere(i).length?`<p class="small instat out" style="margin:0">🚚 Adesso fuori: ${itemWhere(i).map(([e,n])=>`<b>${n}</b> alla ${h(e)}`).join(", ")}. Quando tornano, in "Dove va cosa" segnali <b>Rientrato</b>.</p>`:""}
    ${i.photo?`<button class="iphbig" type="button" data-iphview="${h(i.id)}" aria-label="Apri la foto a schermo intero"><img src="${assetUrl(i.photo)}" alt="Dove si trova ${h(i.name)}" onerror="this.parentNode.style.display='none'"><span>Tocca per ingrandire</span></button>`:""}
-   <dl class="kv"><dt>Dove si trova</dt><dd>${h(i.loc)||"—"}</dd><dt>Responsabile</dt><dd>${h(i.owner)||"—"}</dd><dt>Note</dt><dd>${h(i.notes)||"—"}</dd></dl>
+   <dl class="kv"><dt>Luogo</dt><dd>${h(placeOf(i))||"—"}</dd><dt>Posizione</dt><dd>${h(i.loc)||"—"}</dd><dt>Responsabile</dt><dd>${h(i.owner)||"—"}</dd><dt>Note</dt><dd>${h(i.notes)||"—"}</dd></dl>
    <h3>Dove va</h3>${al.length?`<div class="list">${al.map(a=>{const e=S.events.find(x=>x.id===a.eventId);return `<div class="li"><div class="grow"><div class="t">${h(a.qty)}× → ${h(a.dest||"—")}</div><div class="small muted">${h(e?e.title:"")}${a.who?" · "+h(a.who):""}</div></div>${pill(alS(a.status))}</div>`}).join("")}</div>`:'<p class="small muted">Non è assegnato a nessun evento.</p>'}`,
    `${isOrg()?`<button class="btn left" id="ied">Modifica</button><button class="btn pri" id="ial">Assegna</button>`:""}<button class="btn" data-close>Chiudi</button>`);
   const a=$("#ied",m.el);if(a)a.onclick=()=>{m.close();itemForm(i)};const b=$("#ial",m.el);if(b)b.onclick=()=>{m.close();allocForm({itemId:i.id})};
@@ -2424,13 +2503,14 @@ function castInfoForm(){
 
 /* ---------- eventi UI ---------- */
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("[data-go],[data-ev],[data-act],[data-cal],[data-calst],[data-day],[data-ctab],[data-vtab],[data-tdone],[data-tedit],[data-standopen],[data-zoom],[data-matst],[data-matedit],[data-avedit],[data-vote],[data-idea],[data-tf],[data-photo],[data-npin],[data-narch],[data-nedit],[data-demorole],[data-nwa],[data-mapsel],[data-mtab],[data-magcat],[data-item],[data-aledit],[data-alquick]");
+  const t=e.target.closest("[data-go],[data-ev],[data-act],[data-cal],[data-calst],[data-day],[data-ctab],[data-vtab],[data-tdone],[data-tedit],[data-standopen],[data-zoom],[data-matst],[data-matedit],[data-avedit],[data-vote],[data-idea],[data-tf],[data-photo],[data-npin],[data-narch],[data-nedit],[data-demorole],[data-nwa],[data-mapsel],[data-mtab],[data-magcat],[data-magplace],[data-item],[data-aledit],[data-alquick]");
   if(!t||t.closest(".modal")&&!t.closest("[data-act]"))return;
   const d=t.dataset;
   if(d.vote!==undefined){e.stopPropagation();const i=S.ideas.find(x=>x.id===d.vote);if(!i||!ME.id)return;const v=new Set(i.votes||[]);v.has(ME.id)?v.delete(ME.id):v.add(ME.id);act(()=>store.upd("ideas",i.id,{votes:[...v]})).catch(()=>{});return}
   if(d.mapsel){mapSelect(d.mapsel,d.kind,true);const vp=$("#mapvp");if(vp)vp.scrollIntoView({behavior:"smooth",block:"center"});return}
   if(d.mtab){ANIM="tab";R.tab=d.mtab;MAGF.tab=d.mtab;render(true);return}
   if(d.magcat){MAGF.cat=d.magcat;render(true);return}
+  if(d.magplace){MAGF.place=d.magplace;MAGF.cat="all";render(true);return}
   if(d.item){const it=S.inventory.find(x=>x.id===d.item);if(it)itemModal(it);return}
   if(d.aledit){const a=S.alloc.find(x=>x.id===d.aledit);if(a)allocForm(a);return}
   if(d.alquick){act(()=>store.upd("alloc",d.alquick,{status:"out"}),"Segnato come consegnato").catch(()=>{});return}
@@ -2488,6 +2568,8 @@ document.addEventListener("click",async e=>{
     case "newItem":itemForm();break;
     case "scanMag":scanMag();break;
     case "newMeet":if(isOrg())meetForm();break;
+    case "newPlace":if(isOrg())placeForm();break;
+    case "renamePlace":if(isOrg())renamePlaceForm();break;
     case "tipHomeNo":try{localStorage.setItem("pl-tip-home","no")}catch(_){}render();break;
     case "pwaInstall":if(PWA.evt){PWA.evt.prompt();PWA.evt.userChoice.finally(()=>{PWA.evt=null;schedule()})}break;
     case "newInvite":if(ME.mode==="supa"&&isEditor())inviteForm();break;
