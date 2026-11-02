@@ -364,6 +364,8 @@ select.inl{border:1px solid var(--line);border-radius:6px;background:var(--surfa
 @keyframes splIn{from{opacity:0;transform:translate3d(0,10px,0)}to{opacity:1;transform:none}}
 @keyframes splRun{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
 @media (prefers-reduced-motion:reduce){.splash img,.splash b,.splbar,.splbar::after{animation:none}}
+.scanpick{display:flex;flex-direction:column;gap:10px;margin:12px 0}.scanpick .btn{justify-content:center;cursor:pointer}
+.scanpic{position:relative}.scmore{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.65);color:#fff;font-size:.82rem;padding:4px 8px;border-radius:6px}
 .spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--gold);animation:sp 0.8s linear infinite;display:inline-block}
 @keyframes sp{to{transform:rotate(360deg)}}
 .comments{display:flex;flex-direction:column;gap:8px}
@@ -1673,11 +1675,13 @@ function mlMatch(keys){
   return null;
 }
 function scanMag(){
-  const inp=document.createElement("input");inp.type="file";inp.accept="image/*";inp.setAttribute("capture","environment");
-  inp.style.display="none";document.body.appendChild(inp);
-  inp.onchange=()=>{const f=inp.files&&inp.files[0];inp.remove();if(f)scanRun(f)};
-  inp.click();setTimeout(()=>{if(inp.isConnected&&!inp.files.length)inp.remove()},120000);
   if(ME.mode!=="supa")mlLoad().catch(()=>{}); /* intanto prepara il riconoscimento sul telefono */
+  const m=modal("Fotografa il magazzino",`<p class="small muted" style="margin:0">Scatta una foto adesso oppure scegline fino a 5 dalla galleria: l'app somma tutto quello che trova.</p>
+    <div class="scanpick"><label class="btn pri big">📷 Scatta una foto<input type="file" accept="image/*" capture="environment" hidden data-scfile></label>
+    <label class="btn big">🖼 Scegli dalla galleria<input type="file" accept="image/*" multiple hidden data-scfile></label></div>
+    <p class="small muted" style="margin:0">Consiglio: uno scaffale per foto, da vicino e con la luce accesa. Non fotografare due volte la stessa cosa, altrimenti viene contata due volte.</p>`,`<button class="btn" data-close>Annulla</button>`);
+  $$("[data-scfile]",m.el).forEach(inp=>inp.onchange=()=>{const fs=[...(inp.files||[])].filter(f=>/^image\//.test(f.type)||!f.type);if(!fs.length)return;
+    if(fs.length>5)toast("Uso le prime 5 foto");m.close();scanRun(fs.slice(0,5))});
 }
 const SCAN_MSG={limite_giornaliero:"Hai già fatto 40 foto oggi: riprova domani.",google_occupato:"Il servizio di Google è occupato: riprova tra un minuto.",solo_moderatori:"Solo i moderatori possono usare questa funzione.",non_autenticato:"Esci e rientra nell'app, poi riprova.",foto_non_valida:"Questa foto non va bene: prova con un'altra."};
 function blobB64(b){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]||"");r.onerror=rej;r.readAsDataURL(b)})}
@@ -1694,10 +1698,13 @@ function scanMatch(it){
   const part=inv.filter(i=>{const n=normName(i.name);return n.length>3&&(n.includes(n2)||n2.includes(n))});
   return part.length===1?part[0]:null;
 }
-async function scanRun(file){
-  let blob;try{blob=(await resizeImage(file)).blob}catch(e){toast("Non riesco ad aprire questa foto",true);return}
+async function scanRun(files){
+  files=Array.isArray(files)?files:[files];
+  const blobs=[];for(const f of files){try{blobs.push((await resizeImage(f)).blob)}catch(_){}}
+  if(!blobs.length){toast(files.length>1?"Non riesco ad aprire queste foto":"Non riesco ad aprire questa foto",true);return}
+  const blob=blobs[0];
   const url=URL.createObjectURL(blob);let alive=true;
-  const m=modal("Fotografa il magazzino",`<div class="scanpic"><canvas id="sccv" aria-label="Foto del magazzino con gli oggetti riconosciuti"></canvas></div><div id="scbody"><div class="row" style="gap:12px;align-items:center"><span class="spin" aria-hidden="true"></span><div><b id="scst">${ME.mode==="supa"?"Sto riconoscendo gli articoli…":ML.model?"Sto guardando la foto…":"Preparo il riconoscimento…"}</b><div class="small muted" id="scst2">${ME.mode==="supa"?"Di solito ci vogliono 5–15 secondi.":ML.model?"Pochi secondi.":"Solo la prima volta scarica circa 20 MB: meglio col Wi-Fi."}</div></div></div></div>`,
+  const m=modal("Fotografa il magazzino",`<div class="scanpic"><canvas id="sccv" aria-label="Foto del magazzino con gli oggetti riconosciuti"></canvas>${blobs.length>1?`<span class="scmore">${blobs.length===2?"+ 1 altra foto":`+ altre ${blobs.length-1} foto`}</span>`:""}</div><div id="scbody"><div class="row" style="gap:12px;align-items:center"><span class="spin" aria-hidden="true"></span><div><b id="scst">${ME.mode==="supa"?"Sto riconoscendo gli articoli…":ML.model?"Sto guardando la foto…":"Preparo il riconoscimento…"}</b><div class="small muted" id="scst2">${ME.mode==="supa"?"Di solito ci vogliono 5–15 secondi.":ML.model?"Pochi secondi.":"Solo la prima volta scarica circa 20 MB: meglio col Wi-Fi."}</div></div></div></div>`,
     `<button class="btn" data-close id="scx">Annulla</button><button class="btn pri" id="scok" hidden>Aggiungi al magazzino</button>`);
   new MutationObserver((_,o)=>{if(!m.el.isConnected){o.disconnect();alive=false;URL.revokeObjectURL(url)}}).observe($("#modals"),{childList:true});
   const img=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=url});
@@ -1706,10 +1713,13 @@ async function scanRun(file){
   cv.width=img.naturalWidth;cv.height=img.naturalHeight;const g=cv.getContext("2d");g.drawImage(img,0,0);
   let rows=null,skipped=0,cloud=false;
   if(ME.mode==="supa"&&SB.client){ /* riconoscimento con Gemini, dal server */
-    $("#scst",m.el).textContent="Sto riconoscendo gli articoli…";$("#scst2",m.el).textContent="Di solito ci vogliono 5–15 secondi.";
-    const r=await cloudScan(blob);if(!alive)return;
+    const all=[];let r={ok:true,items:[]};
+    for(let k=0;k<blobs.length;k++){
+      $("#scst",m.el).textContent=blobs.length>1?`Sto riconoscendo gli articoli… foto ${k+1} di ${blobs.length}`:"Sto riconoscendo gli articoli…";$("#scst2",m.el).textContent="Di solito ci vogliono 5–15 secondi per foto.";
+      const rk=await cloudScan(blobs[k]);if(!alive)return;
+      if(!rk.ok){r=rk;break}all.push(...rk.items)}
     if(r.ok){cloud=true;rows=[];const used=new Map();
-      for(const it of r.items){if(!it.sure||!(it.qty>0)){skipped++;continue}
+      for(const it of all){if(!it.sure||!(it.qty>0)){skipped++;continue}
         const ex=scanMatch(it);const key=ex?"id:"+ex.id:"n:"+normName(it.name);
         if(used.has(key)){used.get(key).qty+=it.qty;continue}
         const row={name:ex?ex.name:it.name,qty:it.qty,cat:it.cat,unit:it.unit,ex};used.set(key,row);rows.push(row)}}
